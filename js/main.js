@@ -280,6 +280,7 @@ class BackroomsGame {
         const uiOpen = this.backpackOpen || this.cheatOpen;
         if (!uiOpen && !this._dead) {
             this.player.update(dt, this.input, this.mazeData ? this.mazeData.grid : null, 5, this.mazeData ? this.mazeData.platforms : null);
+            this.renderer.updateLights(this.flickerTime);
             this.renderer.updateFlashlight(this.player, this.flickerTime);
             this.entityManager.update(dt, this.player);
             this._checkExit();

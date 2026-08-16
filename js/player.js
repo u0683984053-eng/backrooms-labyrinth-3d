@@ -91,9 +91,21 @@ export class Player {
         this.vy -= GRAVITY * dt;
         if (this.vy < -40) this.vy = -40;
 
-        // 水平移动 + XZ 碰撞
+        // 水平移动 + XZ 碰撞（子步进：每步 ≤0.55m，防止高速冲刺穿透薄墙）
         const np = this.position.clone().addScaledVector(mv, speed * dt);
-        const rp = this._collide(np, grid, cellSize);
+        const dir = mv.length() > 0 ? mv.clone().normalize() : new THREE.Vector3();
+        let rp = this.position.clone();
+        let remaining = this.position.distanceTo(np);
+        if (dir.length() > 0) {
+            while (remaining > 0.0001) {
+                const step = Math.min(0.55, remaining);
+                const next = rp.clone().addScaledVector(dir, step);
+                const after = this._collide(next, grid, cellSize);
+                if (after.distanceTo(next) > 0.01) break; // 被墙挡住，停止本帧移动
+                rp = after;
+                remaining -= step;
+            }
+        }
         rp.y = this.position.y + this.vy * dt; // 垂直只受重力/跳跃影响
 
         // 平台站立检测
@@ -121,6 +133,19 @@ export class Player {
             this.onGround = false;
         }
 
+        // 头顶碰撞：从平台下方起跳会被平台底面挡住（防止跳进实心平台内部卡住）
+        if (this.vy > 0) {
+            for (const p of this.platforms) {
+                if (Math.abs(rp.x - p.x) < p.w / 2 && Math.abs(rp.z - p.z) < p.d / 2) {
+                    if (prevFoot < p.top && rp.y > p.top) {
+                        rp.y = p.top - 1.6; // 头顶顶在平台底面
+                        this.vy = 0;
+                        break;
+                    }
+                }
+            }
+        }
+
         this.position.copy(rp);
         this.camera.position.copy(this.position);
 
@@ -142,14 +167,23 @@ export class Player {
                 const wx = gx * cellSize, wz = gz * cellSize;
                 const h = cellSize / 2;
 
-                if (c.walls[0] && pos.z - RADIUS < wz - h + 0.15 && Math.abs(pos.x - wx) < h + RADIUS)
-                    r.z = wz - h + 0.15 + RADIUS;
-                if (c.walls[1] && pos.x + RADIUS > wx + h - 0.15 && Math.abs(pos.z - wz) < h + RADIUS)
-                    r.x = wx + h - 0.15 - RADIUS;
-                if (c.walls[2] && pos.z + RADIUS > wz + h - 0.15 && Math.abs(pos.x - wx) < h + RADIUS)
-                    r.z = wz + h - 0.15 - RADIUS;
-                if (c.walls[3] && pos.x - RADIUS < wx - h + 0.15 && Math.abs(pos.z - wz) < h + RADIUS)
-                    r.x = wx - h + 0.15 + RADIUS;
+                // 墙碰撞：玩家 AABB 与墙段相交时，按玩家所在侧推出（双向，防穿墙）
+                // 北墙（z = wz - h）
+                if (c.walls[0] && Math.abs(pos.z - (wz - h)) < 0.15 + RADIUS && Math.abs(pos.x - wx) < h + RADIUS) {
+                    r.z = (pos.z > wz - h) ? wz - h - 0.15 - RADIUS : wz - h + 0.15 + RADIUS;
+                }
+                // 东墙（x = wx + h）
+                if (c.walls[1] && Math.abs(pos.x - (wx + h)) < 0.15 + RADIUS && Math.abs(pos.z - wz) < h + RADIUS) {
+                    r.x = (pos.x < wx + h) ? wx + h - 0.15 - RADIUS : wx + h + 0.15 + RADIUS;
+                }
+                // 南墙（z = wz + h）
+                if (c.walls[2] && Math.abs(pos.z - (wz + h)) < 0.15 + RADIUS && Math.abs(pos.x - wx) < h + RADIUS) {
+                    r.z = (pos.z < wz + h) ? wz + h - 0.15 - RADIUS : wz + h + 0.15 + RADIUS;
+                }
+                // 西墙（x = wx - h）
+                if (c.walls[3] && Math.abs(pos.x - (wx - h)) < 0.15 + RADIUS && Math.abs(pos.z - wz) < h + RADIUS) {
+                    r.x = (pos.x > wx - h) ? wx - h - 0.15 - RADIUS : wx - h + 0.15 + RADIUS;
+                }
             }
         }
 

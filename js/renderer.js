@@ -312,10 +312,31 @@ export class GameRenderer {
         this.scene.background = new THREE.Color(fogColor);
 
         const dark = flags.includes(MazeRenderFlags.DARKNESS);
-        this.ambient.intensity = dark ? 0.1 : 1.5;
-        this.hemi.intensity = dark ? 0.04 : 0.7;
-        for (const l of this.ceilingLights) l.intensity = dark ? 0 : 4.5;
-        this.renderer.toneMappingExposure = dark ? 1.0 : 1.5;
+        // 室内/封闭层级强制天花板（洞穴、木屋、地狱等按设定应有顶）
+        const noCeil = flags.includes(MazeRenderFlags.NO_CEILING);
+        const forcedCeil = config.id === 8 || config.id === 27 || config.id === 666;
+        this._hasCeiling = !noCeil || forcedCeil;
+        this._outdoor = noCeil && !forcedCeil;
+        this._openBorder = flags.includes(MazeRenderFlags.OPEN_BORDER);
+
+        // 光照按层级类型
+        if (this._outdoor) {
+            // 户外层级：白天感（环境光强、无荧光灯）
+            this.ambient.intensity = 2.0;
+            this.hemi.intensity = 1.0;
+            for (const l of this.ceilingLights) l.intensity = 0;
+            this.renderer.toneMappingExposure = 1.45;
+        } else if (dark) {
+            this.ambient.intensity = 0.1;
+            this.hemi.intensity = 0.04;
+            for (const l of this.ceilingLights) l.intensity = 0;
+            this.renderer.toneMappingExposure = 1.0;
+        } else {
+            this.ambient.intensity = 1.5;
+            this.hemi.intensity = 0.7;
+            for (const l of this.ceilingLights) l.intensity = 4.5;
+            this.renderer.toneMappingExposure = 1.5;
+        }
         // 层级微调：399 霓虹深渊是夜晚城市，但保持可见
         if (this.config && this.config.id === 399) {
             this.ambient.intensity = 1.85;
@@ -332,11 +353,11 @@ export class GameRenderer {
         this.ceilMat.side = ds ? THREE.DoubleSide : THREE.FrontSide;
         this.ceilMat.wireframe = wf;
 
-        this._hasCeiling = !flags.includes(MazeRenderFlags.NO_CEILING);
-        this._openBorder = flags.includes(MazeRenderFlags.OPEN_BORDER);
+        this._hasCeiling = this._hasCeiling;
+        this._openBorder = this._openBorder;
 
         // 尘埃粒子：室内层级可见
-        if (this.dustPoints) this.dustPoints.visible = !flags.includes(MazeRenderFlags.OPEN_BORDER) && !flags.includes(MazeRenderFlags.DARKNESS);
+        if (this.dustPoints) this.dustPoints.visible = !this._outdoor && !dark;
     }
 
     // ---- InstancedMesh 辅助：同材质几何体 1 次 draw call ----
@@ -414,14 +435,16 @@ export class GameRenderer {
             }
         }
 
-        // 荧光灯箱：每 15 单位一个（经典三管灯箱）
-        for (let x = -60; x <= 60; x += 15) {
-            for (let z = -60; z <= 60; z += 15) {
-                lampFrameMs.push(mat(x, WALL_H - 0.07, z, _qId, 3.6, 0.14, 0.55));
-                for (const dz of [-0.17, 0, 0.17]) {
-                    lampTubeMs.push(mat(x, WALL_H - 0.17, z + dz, _qId, 3.4, 0.05, 0.09));
+        // 荧光灯箱：每 15 单位一个（经典三管灯箱；仅室内有天花板的层级）
+        if (this._hasCeiling) {
+            for (let x = -60; x <= 60; x += 15) {
+                for (let z = -60; z <= 60; z += 15) {
+                    lampFrameMs.push(mat(x, WALL_H - 0.07, z, _qId, 3.6, 0.14, 0.55));
+                    for (const dz of [-0.17, 0, 0.17]) {
+                        lampTubeMs.push(mat(x, WALL_H - 0.17, z + dz, _qId, 3.4, 0.05, 0.09));
+                    }
+                    lampGlowMs.push(mat(x, WALL_H - 0.22, z, _qX90, 3.8, 1, 0.7));
                 }
-                lampGlowMs.push(mat(x, WALL_H - 0.22, z, _qX90, 3.8, 1, 0.7));
             }
         }
 
@@ -920,6 +943,28 @@ export class GameRenderer {
         }
     }
 
+    // 荧光灯闪烁（f 版设定：荧光灯嗡嗡作响、偶尔闪烁——闪的是灯，不是手电筒）
+    updateLights(flickerTime) {
+        const flicker = this.config && this.config.renderFlags && this.config.renderFlags.includes(MazeRenderFlags.FLICKERING_LIGHTS);
+        if (!flicker || this._outdoor || !this.lampTubeMat) {
+            if (this.lampTubeMat) this.lampTubeMat.emissiveIntensity = 3.0;
+            return;
+        }
+        // 缓慢明暗呼吸 + 偶发熄灭（每秒 2 次左右的随机灭灯瞬间）
+        const phase = Math.sin(flickerTime * 2.3) * 0.5 + 0.5;
+        let base = 2.4 + phase * 1.2;
+        if (Math.sin(flickerTime * 1.7) > 0.985) base = 0.15;      // 偶发瞬间熄灭
+        if (Math.sin(flickerTime * 3.1 + 1.3) > 0.992) base = 0.1; // 另一组灯闪
+        this.lampTubeMat.emissiveIntensity = base;
+        for (let i = 0; i < this.ceilingLights.length; i++) {
+            const l = this.ceilingLights[i];
+            if (l.intensity <= 0) continue;
+            const ph = Math.sin(flickerTime * 2.3 + i * 1.7);
+            l.intensity = 4.5 * (0.6 + 0.4 * (ph * 0.5 + 0.5));
+            if (Math.sin(flickerTime * 3.1 + i * 2.3) > 0.99) l.intensity = 0.3;
+        }
+    }
+
     updateFlashlight(player, flickerTime) {
         if (!this.flashlight) return;
         this.flashlight.position.copy(player.position);
@@ -933,14 +978,9 @@ export class GameRenderer {
         if (player.flashlightOn) {
             this.flashCone.position.copy(player.position.clone().addScaledVector(dir, 4.5));
             this.flashCone.quaternion.copy(player.camera.quaternion);
-            const flicker = this.config && this.config.renderFlags && this.config.renderFlags.includes(MazeRenderFlags.FLICKERING_LIGHTS);
-            if (flicker) {
-                this.flashlight.intensity = Math.sin(flickerTime * 15) * 0.5 + 3.2;
-                this.flashCone.material.opacity = 0.05 + Math.sin(flickerTime * 19) * 0.03;
-            } else {
-                this.flashlight.intensity = 6.5;
-                this.flashCone.material.opacity = 0.1;
-            }
+            // 手电筒恒定亮度（闪烁的是荧光灯，不是手电筒）
+            this.flashlight.intensity = 6.5;
+            this.flashCone.material.opacity = 0.1;
         }
 
         if (player.isMoving) {
