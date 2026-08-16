@@ -864,19 +864,25 @@ export class GameRenderer {
             this._instanced(unitPlane, waterMat, wm, this.decoGroup, false, true);
         }
 
-        // ---- 杏仁水补给（f 版核心设定） ----
+        // ---- 补给（f 版核心设定） ----
         if (mazeData.pickups && mazeData.pickups.length) {
+            const pickupStyles = {
+                almond_water: { bottle: 0xd8e8f0, cap: 0x2060a0, glow: 0x66ccff, label: '💧' },
+                memory_juice: { bottle: 0xc8a8e8, cap: 0x6020a0, glow: 0xb066ff, label: '🧃' },
+                royal_ration: { bottle: 0xd8b878, cap: 0x8a6020, glow: 0xffcc66, label: '🍱' },
+                cashew_water: { bottle: 0xa8e8d8, cap: 0x206080, glow: 0x66ffcc, label: '⚗️' },
+            };
             for (const pk of mazeData.pickups) {
+                const st = pickupStyles[pk.type] || pickupStyles.almond_water;
                 const grp = new THREE.Group();
-                const bottleMat = new THREE.MeshStandardMaterial({
-                    color: 0xd8e8f0, roughness: 0.15, metalness: 0.1, transparent: true, opacity: 0.85
-                });
-                const body = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 0.32, 10), bottleMat);
+                const body = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 0.32, 10), new THREE.MeshStandardMaterial({
+                    color: st.bottle, roughness: 0.15, metalness: 0.1, transparent: true, opacity: 0.85
+                }));
                 body.position.y = 0.18;
-                const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.08, 8), new THREE.MeshStandardMaterial({ color: 0x2060a0, roughness: 0.4 }));
+                const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.08, 8), new THREE.MeshStandardMaterial({ color: st.cap, roughness: 0.4 }));
                 cap.position.y = 0.38;
                 const glow = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 6), new THREE.MeshBasicMaterial({
-                    color: 0x66ccff, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false
+                    color: st.glow, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false
                 }));
                 glow.position.y = 0.25;
                 grp.add(body, cap, glow);
@@ -1046,6 +1052,35 @@ export class GameRenderer {
                     color: 0xff6020, transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending, depthWrite: false
                 }));
                 group.add(core, glow);
+                break;
+            }
+            case 'partygoer': {
+                // 派对客（f 版设定）：黄色微笑面具 + 彩色锥帽的狂欢者
+                const head = new THREE.Mesh(new THREE.SphereGeometry(0.4, 18, 14), new THREE.MeshStandardMaterial({
+                    map: this._partyTex || (this._partyTex = (() => {
+                        const c = document.createElement('canvas');
+                        c.width = 256; c.height = 256;
+                        const g = c.getContext('2d');
+                        g.fillStyle = '#f0d040';
+                        g.fillRect(0, 0, 256, 256);
+                        g.fillStyle = '#101010';
+                        g.beginPath(); g.ellipse(92, 96, 20, 26, 0, 0, Math.PI * 2); g.fill();
+                        g.beginPath(); g.ellipse(164, 96, 20, 26, 0, 0, Math.PI * 2); g.fill();
+                        g.beginPath(); g.ellipse(128, 168, 46, 36, 0, 0, Math.PI); g.fill();
+                        return finishTexture(new THREE.CanvasTexture(c));
+                    })()),
+                    roughness: 0.6
+                }));
+                head.castShadow = true;
+                const hat = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.5, 8), new THREE.MeshStandardMaterial({
+                    color: 0xc02060, roughness: 0.5, emissive: 0x400020, emissiveIntensity: 0.3
+                }));
+                hat.position.y = 0.72;
+                const body = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.36, 1.4, 8), new THREE.MeshStandardMaterial({
+                    color: 0x8a3050, roughness: 0.7
+                }));
+                body.position.y = -0.55;
+                group.add(head, hat, body);
                 break;
             }
             case 'duller': {

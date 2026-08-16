@@ -378,6 +378,16 @@ body {
     margin-bottom: 10px;
 }
 #transition-level-desc { color: #888; font-style: italic; }
+#transition-level-class {
+    color: #c8a860;
+    font-size: 0.85rem;
+    letter-spacing: 0.12em;
+    margin-bottom: 12px;
+    border: 1px solid rgba(200,168,96,0.35);
+    display: inline-block;
+    padding: 3px 14px;
+    background: rgba(20,16,4,0.6);
+}
 
 /* 通关画面 */
 #ending-screen { background: radial-gradient(ellipse at center, rgba(40,30,5,0.95), rgba(5,5,0,0.98)); }

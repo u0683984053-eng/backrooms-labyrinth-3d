@@ -24,6 +24,16 @@ export class Inventory {
             description: '后室中少数能对抗实体的手段。朝视线方向投掷，灼烧实体。', stackable: true, count: 2,
             effect: { throwFireSalt: true }
         });
+        this.addItem({
+            id: 'memory_juice', name: '记忆汁', icon: '🧃', type: 'consumable',
+            description: '恢复50点理智。M.E.G. 记载：紫色的汁液能抚平记忆的裂痕。', stackable: true, count: 1,
+            effect: { sanity: 50 }
+        });
+        this.addItem({
+            id: 'royal_ration', name: '皇家口粮', icon: '🍱', type: 'consumable',
+            description: '恢复20生命值和40体力值。M.E.G. 后勤标准军用口粮。', stackable: true, count: 1,
+            effect: { heal: 20, stamina: 40 }
+        });
     }
 
     addItem(item) {
@@ -62,6 +72,7 @@ export class Inventory {
                 if (item.effect.heal) player.heal(item.effect.heal);
                 if (item.effect.stamina) player.stamina = Math.min(player.maxStamina, player.stamina + item.effect.stamina);
                 if (item.effect.sanity) player.sanity = Math.min(100, player.sanity + item.effect.sanity);
+                if (item.effect.sanityDrain) player.sanity = Math.max(0, player.sanity - item.effect.sanityDrain);
             }
             this.removeItem(index);
             return true;

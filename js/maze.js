@@ -86,16 +86,25 @@ export class MazeGenerator {
         this._addLevelSpecial();
     }
 
-    // ---- 杏仁水补给（f 版核心设定：流浪者的生命之源） ----
+    // ---- 补给（f 版核心设定：杏仁水最常见；记忆汁/皇家口粮较稀有；腰果水是陷阱） ----
     _addPickups() {
-        const n = 2 + Math.floor(Math.random() * 3);
+        let n = 2 + Math.floor(Math.random() * 3);
+        // f 版设定：Level 1「宜居区」物资丰富
+        if (this.config.id === 1) n *= 2;
+        const roll = () => {
+            const r = Math.random();
+            if (r < 0.68) return 'almond_water';
+            if (r < 0.82) return 'memory_juice';
+            if (r < 0.93) return 'royal_ration';
+            return 'cashew_water';
+        };
         let placed = 0;
-        for (let t = 0; t < 80 && placed < n; t++) {
+        for (let t = 0; t < 100 && placed < n; t++) {
             const ex = 2 + Math.floor(Math.random() * (this.width - 4));
             const ey = 2 + Math.floor(Math.random() * (this.height - 4));
             if (this._cellBlocked(ex, ey, 0)) continue;
             this.pickups.push({
-                type: 'almond_water',
+                type: roll(),
                 x: ex * this.cellSize + (Math.random() - 0.5) * 2,
                 z: ey * this.cellSize + (Math.random() - 0.5) * 2
             });

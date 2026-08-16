@@ -96,7 +96,7 @@ export const LEVEL_CONFIGS = {
     5: def(5, '恐怖酒店', '一座腐朽的1930年代华丽酒店，充满扭曲走廊和攻击性实体。',
         TerrainType.HOTEL, SurvivalClass.TWO, Environment.INDOOR_ARTIFICIAL,
         [MazeRenderFlags.FOG_HEAVY],
-        ['smiler', 'hound', 'deathmoth', 'skin_stealer', 'clump']),
+        ['smiler', 'hound', 'deathmoth', 'skin_stealer', 'clump', 'partygoer']),
 
     6: def(6, '熄灭', '完全的、彻底的黑暗。任何光源在这里都无法正常工作。最危险的早期层级。',
         TerrainType.CORRIDORS, SurvivalClass.FIVE, Environment.INDOOR_ARTIFICIAL,
@@ -161,7 +161,7 @@ export const LEVEL_CONFIGS = {
     52: def(52, '学校', '废弃的小学，有教室、走廊和"校长"实体。',
         TerrainType.HALLS, SurvivalClass.TWO, Environment.INDOOR_ARTIFICIAL,
         [MazeRenderFlags.FLICKERING_LIGHTS],
-        ['smiler', 'hound', 'skin_stealer']),
+        ['smiler', 'hound', 'skin_stealer', 'partygoer']),
 
     94: def(94, '金斯威尔小镇', '一个被困于永恒暮色中的1950年代小镇。平静却极度诡异。',
         TerrainType.URBAN, SurvivalClass.TWO, Environment.OUTDOOR_TERRESTRIAL,
@@ -176,7 +176,7 @@ export const LEVEL_CONFIGS = {
     188: def(188, '窗户', '无尽的走廊，两侧是展示不可能景观的窗户。',
         TerrainType.HALLS, SurvivalClass.ONE, Environment.INDOOR_ARTIFICIAL,
         [MazeRenderFlags.TRANSPARENT_WALLS, MazeRenderFlags.FLICKERING_LIGHTS],
-        ['smiler', 'deathmoth']),
+        ['smiler', 'deathmoth', 'partygoer']),
 
     189: def(189, '康养中心', '废弃的水疗中心，游泳池、蒸汽房和诡异的宁静。',
         TerrainType.COMPLEX, SurvivalClass.TWO, Environment.INDOOR_ARTIFICIAL,
@@ -191,7 +191,7 @@ export const LEVEL_CONFIGS = {
     290: def(290, '购物中心', '废弃的1990年代购物中心。美食广场仍有电力。',
         TerrainType.COMPLEX, SurvivalClass.ONE, Environment.INDOOR_ARTIFICIAL,
         [MazeRenderFlags.FLICKERING_LIGHTS],
-        ['smiler', 'hound', 'skin_stealer', 'clump']),
+        ['smiler', 'hound', 'skin_stealer', 'clump', 'partygoer']),
 
     399: def(399, '霓虹深渊', '赛博朋克风格的空间，霓虹灯、湿漉漉的街道和无尽的雨。',
         TerrainType.URBAN, SurvivalClass.TWO, Environment.OUTDOOR_TERRESTRIAL,
@@ -300,9 +300,28 @@ export const ENTITY_DEFS = {
     skin_stealer: { name: '剥皮者', danger: 5, speed: 6, detectionRadius: 35, chaseDuration: 30, health: 150, damage: 25, type: 'aggressive', desc: '披着受害者皮肤行走的怪物。' },
     scratcher: { name: '抓挠者', danger: 3, speed: 5, detectionRadius: 20, chaseDuration: 15, health: 70, damage: 18, type: 'aggressive', desc: '长爪手指刮擦墙壁。' },
     burster: { name: '自爆者', danger: 4, speed: 7, detectionRadius: 20, chaseDuration: 10, health: 50, damage: 30, type: 'burst', desc: '靠近目标时自爆。' },
+    partygoer: { name: '派对客', danger: 4, speed: 5.5, detectionRadius: 26, chaseDuration: 25, health: 90, damage: 18, type: 'aggressive', desc: '戴着微笑面具的狂欢者，会诱骗你参加"派对"。' },
     thing_on_level_7: { name: 'Level 7之物', danger: 5, speed: 3, detectionRadius: 50, chaseDuration: 60, health: 300, damage: 40, type: 'boss', desc: '水下某种巨大的存在。' },
 };
 
 export function getEntityDef(entityId) {
     return ENTITY_DEFS[entityId] || null;
+}
+
+// f 版生存难度评级（M.E.G. 档案格式）
+export function getSurvivalClassInfo(survClass) {
+    switch (survClass) {
+        case SurvivalClass.ZERO: return { label: 'Class 0', safe: '安全', stable: '稳定', entity: '实体绝迹' };
+        case SurvivalClass.ONE: return { label: 'Class 1', safe: '安全', stable: '稳定', entity: '实体极少' };
+        case SurvivalClass.TWO: return { label: 'Class 2', safe: '不安全', stable: '稳定', entity: '实体稀少' };
+        case SurvivalClass.THREE: return { label: 'Class 3', safe: '不安全', stable: '不稳定', entity: '实体数量中等' };
+        case SurvivalClass.FOUR: return { label: 'Class 4', safe: '不安全', stable: '极不稳定', entity: '大量实体' };
+        case SurvivalClass.FIVE: return { label: 'Class 5', safe: '不安全', stable: '极不稳定', entity: '实体侵染' };
+        case SurvivalClass.DEADZONE: return { label: 'Class 死区', safe: '不安全', stable: '极不稳定', entity: '实体横行' };
+        case SurvivalClass.UNKNOWN: return { label: 'Class 未知', safe: '未知', stable: '未知', entity: '未知' };
+        case SurvivalClass.UNDETERMINED: return { label: 'Class 未定', safe: '未定', stable: '未定', entity: '未定' };
+        case SurvivalClass.PENDING: return { label: 'Class 待定', safe: '待定', stable: '待定', entity: '待定' };
+        case SurvivalClass.VARIABLE: return { label: 'Class 变量', safe: '随层级变化', stable: '随层级变化', entity: '随层级变化' };
+        default: return { label: 'Class ?', safe: '未知', stable: '未知', entity: '未知' };
+    }
 }

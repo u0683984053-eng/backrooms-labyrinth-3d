@@ -6,7 +6,7 @@ import { InputManager } from './input.js';
 import { EntityManager } from './entities.js';
 import { Inventory } from './inventory.js';
 import { AudioManager } from './audio.js';
-import { getLevelConfig, getDetailedLevels, MazeRenderFlags } from './config.js';
+import { getLevelConfig, getDetailedLevels, MazeRenderFlags, getSurvivalClassInfo } from './config.js';
 
 class BackroomsGame {
     constructor() {
@@ -263,9 +263,17 @@ class BackroomsGame {
         const ov = document.getElementById('level-transition');
         document.getElementById('transition-level-name').textContent = name;
         document.getElementById('transition-level-desc').textContent = desc;
+        // f 版设定：M.E.G. 档案式生存难度评级
+        const info = getSurvivalClassInfo(this.mazeData ? getLevelConfig(this.currentLevel).survivalClass : null);
+        const cls = document.getElementById('transition-level-class');
+        if (cls) {
+            cls.textContent = info
+                ? 'M.E.G. 档案 · ' + info.label + ' ｜ ' + info.safe + ' / ' + info.stable + ' / ' + info.entity
+                : '';
+        }
         ov.classList.remove('hidden');
         this.transitioning = true;
-        setTimeout(() => { ov.classList.add('hidden'); this.transitioning = false; }, 1800);
+        setTimeout(() => { ov.classList.add('hidden'); this.transitioning = false; }, 2200);
     }
 
     _loop(time) {
@@ -285,12 +293,13 @@ class BackroomsGame {
             this.entityManager.update(dt, this.player);
             this._checkExit();
 
-            // f 版设定：杏仁水补给拾取（流浪者的生命之源）
+            // f 版设定：补给拾取
             const pickup = this._nearestPickup(2.2);
             const hintEl = document.getElementById('interaction-hint');
             if (pickup && !this.currentDark) {
+                const names = { almond_water: '杏仁水 💧', memory_juice: '记忆汁 🧃', royal_ration: '皇家口粮 🍱', cashew_water: '腰果水 ⚗️' };
                 hintEl.classList.remove('hidden');
-                hintEl.textContent = '按 E 拾取杏仁水 💧';
+                hintEl.textContent = '按 E 拾取 ' + (names[pickup.type] || '补给');
                 if (this.input.isPressed('KeyE')) this._collectPickup(pickup);
             }
 
@@ -400,11 +409,30 @@ class BackroomsGame {
     }
 
     _collectPickup(pk) {
-        const added = this.inventory.addItem({
-            id: 'almond_water', name: '杏仁水', icon: '💧', type: 'consumable',
-            description: '恢复30点生命值并平复理智。流浪者的生命之源。', stackable: true, count: 1,
-            effect: { heal: 30, sanity: 20 }
-        });
+        const defs = {
+            almond_water: {
+                id: 'almond_water', name: '杏仁水', icon: '💧', type: 'consumable',
+                description: '恢复30点生命值并平复理智。流浪者的生命之源。', stackable: true, count: 1,
+                effect: { heal: 30, sanity: 20 }
+            },
+            memory_juice: {
+                id: 'memory_juice', name: '记忆汁', icon: '🧃', type: 'consumable',
+                description: '恢复50点理智。M.E.G. 记载：紫色的汁液能抚平记忆的裂痕。', stackable: true, count: 1,
+                effect: { sanity: 50 }
+            },
+            royal_ration: {
+                id: 'royal_ration', name: '皇家口粮', icon: '🍱', type: 'consumable',
+                description: '恢复20生命值和40体力值。M.E.G. 后勤标准军用口粮。', stackable: true, count: 1,
+                effect: { heal: 20, stamina: 40 }
+            },
+            cashew_water: {
+                id: 'cashew_water', name: '腰果水', icon: '⚗️', type: 'consumable',
+                description: '与杏仁水相反的存在。喝了它会损失25点理智。', stackable: true, count: 1,
+                effect: { sanityDrain: 25 }
+            },
+        };
+        const itemDef = defs[pk.type] || defs.almond_water;
+        const added = this.inventory.addItem({ ...itemDef });
         if (!added) return;
         this.mazeData.pickups = this.mazeData.pickups.filter(p => p !== pk);
         for (const c of this.renderer.mazeGroup.children) {
