@@ -349,6 +349,13 @@ export class MazeGenerator {
                     z: ey * this.cellSize
                 });
             }
+        } else if (this.config.id === 1000) {
+            // Level 1000「终点」：不可能几何的中心立着终点之门
+            this.decorations.push({
+                type: 'finalgate',
+                x: Math.floor(this.width / 2) * this.cellSize,
+                z: Math.floor(this.height / 2) * this.cellSize
+            });
         } else if (this.config.id === 999) {
             // Level 999「最后的延伸」：悬浮虚空中的石质大教堂 → 中央圣柱
             this.decorations.push({

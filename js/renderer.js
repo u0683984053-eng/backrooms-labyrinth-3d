@@ -1086,6 +1086,28 @@ export class GameRenderer {
                     grp.add(post, box, flag);
                     grp.position.set(d.x, 0, d.z);
                     single.push(grp);
+                } else if (d.type === 'finalgate') {
+                    // Level 1000「终点」：终点之门（巨门 + 光幕 + 光柱）
+                    const grp = new THREE.Group();
+                    const gateMat = new THREE.MeshStandardMaterial({ color: 0x6a5a44, roughness: 0.7 });
+                    const pl = new THREE.Mesh(new THREE.BoxGeometry(1.2, 8, 1.2), gateMat);
+                    pl.position.set(-3.5, 4, 0);
+                    const pr = pl.clone(); pr.position.x = 3.5;
+                    const lintel = new THREE.Mesh(new THREE.BoxGeometry(8.2, 1.4, 1.2), gateMat);
+                    lintel.position.set(0, 8.4, 0);
+                    const veil = new THREE.Mesh(new THREE.PlaneGeometry(6.4, 7.6), new THREE.MeshBasicMaterial({
+                        color: 0xfff2c0, transparent: true, opacity: 0.28,
+                        blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide
+                    }));
+                    veil.position.set(0, 4, 0);
+                    const beam = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 3.5, 16, 10, 1, true), new THREE.MeshBasicMaterial({
+                        color: 0xfff6d0, transparent: true, opacity: 0.1,
+                        blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide
+                    }));
+                    beam.position.y = 10;
+                    grp.add(pl, pr, lintel, veil, beam);
+                    grp.position.set(d.x, 0, d.z);
+                    single.push(grp);
                 } else if (d.type === 'blackboard') {
                     // Level 52「学校」：教室黑板
                     const grp = new THREE.Group();

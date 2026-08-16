@@ -1,4 +1,4 @@
-﻿export class AudioManager {
+export class AudioManager {
     constructor() {
         this.ctx = null;
         this.master = null;
@@ -135,7 +135,37 @@
         };
         const t = () => this.ctx.currentTime;
 
-        if (levelId === 5) {
+        if (levelId === 999) {
+            // Level 999「最后的延伸」：低沉的终局合唱
+            const mk2 = (freq, detune) => {
+                const s = mk();
+                s.o.type = 'sine';
+                s.o.frequency.value = freq;
+                s.o.detune.value = detune;
+                s.f.type = 'lowpass'; s.f.frequency.value = 400;
+                s.g.gain.value = 0.02;
+                return s;
+            };
+            this.levelSounds.push(mk2(98, 0));
+            this.levelSounds.push(mk2(146.8, 4));
+            this.levelSounds.push(mk2(196, -4));
+            const iv = setInterval(() => {
+                if (!this.enabled) return;
+                const t2 = this.ctx.currentTime;
+                for (const fq of [98, 130.8, 164.8]) {
+                    const s = mk();
+                    s.o.type = 'sine';
+                    s.o.frequency.value = fq;
+                    s.f.type = 'lowpass'; s.f.frequency.value = 300;
+                    s.g.gain.setValueAtTime(0.025, t2);
+                    s.g.gain.linearRampToValueAtTime(0.012, t2 + 2);
+                    s.g.gain.linearRampToValueAtTime(0.001, t2 + 4);
+                    s.o.stop(t2 + 4.2);
+                    this.levelSounds.push(s);
+                }
+            }, 5200);
+            this.levelSounds.push({ stop: () => clearInterval(iv), iv });
+        } else if (levelId === 5) {
             // 恐怖酒店：走调的留声机圆舞曲
             const notes = [392, 330, 294, 330, 392, 330, 294, 262];
             const iv = setInterval(() => {

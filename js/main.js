@@ -170,6 +170,13 @@ class BackroomsGame {
         this.input.requestLock();
         this.prevTime = performance.now();
         this._loop(performance.now());
+        // 生存指南（M.E.G. 风格，8 秒后消失）
+        const guide = document.getElementById('guide-overlay');
+        if (guide) {
+            guide.classList.remove('hidden');
+            clearTimeout(this._guideTimer);
+            this._guideTimer = setTimeout(() => guide.classList.add('hidden'), 9000);
+        }
     }
 
     _loadLevel(id) {
