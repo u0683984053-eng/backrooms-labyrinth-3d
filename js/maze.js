@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+﻿import * as THREE from 'three';
 import { TerrainType, MazeRenderFlags } from './config.js';
 
 const WALL_HEIGHT = 3.5;
@@ -22,6 +22,7 @@ export class MazeGenerator {
         this.entitySpawns = [];
         this.platforms = [];
         this.exits = [];
+        this.pickups = [];
     }
 
     generate() {
@@ -37,7 +38,8 @@ export class MazeGenerator {
             decorations: this.decorations,
             entitySpawns: this.entitySpawns,
             platforms: this.platforms,
-            exits: this.exits
+            exits: this.exits,
+            pickups: this.pickups
         };
     }
 
@@ -80,6 +82,38 @@ export class MazeGenerator {
         this._addVerticality();
         this._addExits();
         this._addFurniture();
+        this._addPickups();
+        this._addLevelSpecial();
+    }
+
+    // ---- 杏仁水补给（f 版核心设定：流浪者的生命之源） ----
+    _addPickups() {
+        const n = 2 + Math.floor(Math.random() * 3);
+        let placed = 0;
+        for (let t = 0; t < 80 && placed < n; t++) {
+            const ex = 2 + Math.floor(Math.random() * (this.width - 4));
+            const ey = 2 + Math.floor(Math.random() * (this.height - 4));
+            if (this._cellBlocked(ex, ey, 0)) continue;
+            this.pickups.push({
+                type: 'almond_water',
+                x: ex * this.cellSize + (Math.random() - 0.5) * 2,
+                z: ey * this.cellSize + (Math.random() - 0.5) * 2
+            });
+            placed++;
+        }
+    }
+
+    // ---- 层级专属大结构（f 版设定） ----
+    _addLevelSpecial() {
+        if (this.config.id === 7) {
+            // Level 7「深海恐惧」：无尽海洋中央的孤房
+            this.decorations.push({
+                type: 'sea_house',
+                x: Math.floor(this.width / 2) * this.cellSize,
+                z: Math.floor(this.height / 2) * this.cellSize,
+                rot: Math.floor(Math.random() * 4) * (Math.PI / 2)
+            });
+        }
     }
 
     // ---- 多出口系统：主出口 + 1~2 个隐藏出口（夹层上有一个） ----
@@ -101,7 +135,7 @@ export class MazeGenerator {
                 const sc = Math.floor(this.startPos.x / this.cellSize);
                 const sz = Math.floor(this.startPos.z / this.cellSize);
                 if (Math.abs(ex - sc) < 6 && Math.abs(ey - sz) < 6) continue;
-                if (this._cellBlocked(ex, ey, 1)) continue;
+                if (this._cellBlocked(ex, ey, 0)) continue;
                 this.exits.push({ x: ex * this.cellSize, z: ey * this.cellSize, hidden: true });
                 break;
             }
@@ -126,15 +160,17 @@ export class MazeGenerator {
         const plan = counts[t];
         if (plan) {
             for (const [type, n] of Object.entries(plan)) {
-                for (let i = 0; i < n; i++) {
+                let placed = 0;
+                for (let t2 = 0; t2 < 100 && placed < n; t2++) {
                     const ex = 2 + Math.floor(Math.random() * (this.width - 4));
                     const ey = 2 + Math.floor(Math.random() * (this.height - 4));
-                    if (this._cellBlocked(ex, ey, 1)) continue;
+                    if (this._cellBlocked(ex, ey, 0)) continue;
                     const jx = ex * this.cellSize + (Math.random() - 0.5) * 2;
                     const jz = ey * this.cellSize + (Math.random() - 0.5) * 2;
                     let rot = Math.floor(Math.random() * 4) * (Math.PI / 2);
                     if (type === 'valve') rot = Math.random() * Math.PI * 2;
                     this.decorations.push({ type, x: jx, z: jz, rot });
+                    placed++;
                 }
             }
         }
@@ -229,7 +265,7 @@ export class MazeGenerator {
             for (let i = 0; i < n; i++) {
                 const ex = 2 + Math.floor(Math.random() * (this.width - 4));
                 const ey = 2 + Math.floor(Math.random() * (this.height - 4));
-                if (!this._cellBlocked(ex, ey, 1)) {
+                if (!this._cellBlocked(ex, ey, 0)) {
                     this.platforms.push({
                         type: 'crate',
                         x: ex * this.cellSize + (Math.random() - 0.5) * 1.5,

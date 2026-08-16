@@ -74,6 +74,13 @@ class BackroomsGame {
         }
         if (e.code === 'Backquote') { this.toggleCheat(!this.cheatOpen); return; }
         if (e.code === 'KeyF' && !this.backpackOpen && !this.cheatOpen) {
+            if (this.currentDark) {
+                // f 版设定：Level 6「熄灭」绝对黑暗，任何光源无法工作
+                this.failLightTimer = 2.5;
+                document.getElementById('flashlight-indicator').classList.remove('hidden');
+                document.getElementById('flashlight-indicator').textContent = '🔦 光源无法工作';
+                return;
+            }
             this.player.toggleFlashlight();
             document.getElementById('flashlight-indicator').classList.toggle('hidden', !this.player.flashlightOn);
         }
@@ -130,6 +137,8 @@ class BackroomsGame {
         const flags = config.renderFlags || [];
         this.player.sanityDrain = flags.includes(MazeRenderFlags.DARKNESS) ? 1.0 : 0.3;
         this.player.sanity = Math.max(30, this.player.sanity);
+        this.currentDark = flags.includes(MazeRenderFlags.DARKNESS);
+        this.failLightTimer = 0;
 
         this.entityManager.spawnEntities(this.mazeData.entitySpawns);
         this.audio.stopAmbient();
@@ -193,21 +202,27 @@ class BackroomsGame {
             this.entityManager.update(dt, this.player);
             this._checkExit();
 
+            // f 版设定：杏仁水补给拾取（流浪者的生命之源）
+            const pickup = this._nearestPickup(2.2);
+            const hintEl = document.getElementById('interaction-hint');
+            if (pickup && !this.currentDark) {
+                hintEl.classList.remove('hidden');
+                hintEl.textContent = '按 E 拾取杏仁水 💧';
+                if (this.input.isPressed('KeyE')) this._collectPickup(pickup);
+            }
+
             // f 版设定：卡出（noclip）——按住 E 从现实中卡出
-            if (this.input.isPressed('KeyE')) {
+            if (this.input.isPressed('KeyE') && !pickup) {
                 this.noclipHeld += dt;
-                const hint = document.getElementById('interaction-hint');
-                hint.classList.remove('hidden');
-                hint.textContent = '卡出中... ' + Math.min(100, Math.floor(this.noclipHeld / 1.2 * 100)) + '%';
+                hintEl.classList.remove('hidden');
+                hintEl.textContent = '卡出中... ' + Math.min(100, Math.floor(this.noclipHeld / 1.2 * 100)) + '%';
                 if (this.noclipHeld >= 1.2) {
                     this.noclipHeld = 0;
                     this._noclip();
                 }
             } else {
-                if (this.noclipHeld > 0) {
-                    this.noclipHeld = 0;
-                    document.getElementById('interaction-hint').classList.add('hidden');
-                }
+                if (this.noclipHeld > 0) this.noclipHeld = 0;
+                if (!pickup && !this.currentDark) hintEl.classList.add('hidden');
             }
 
             const iv = this.input.getInputVector();
@@ -222,8 +237,45 @@ class BackroomsGame {
             if (!this.player.alive) { this._dead = true; this._onDeath(); }
         }
 
+        // f 版设定：Level 6 光源失效提示计时
+        if (this.failLightTimer > 0) {
+            this.failLightTimer -= dt;
+            if (this.failLightTimer <= 0) {
+                document.getElementById('flashlight-indicator').classList.add('hidden');
+                document.getElementById('flashlight-indicator').textContent = '🔦 开';
+            }
+        }
+
         this._updateHUD();
         this.renderer.render();
+    }
+
+    // 最近的可拾取补给
+    _nearestPickup(range) {
+        if (!this.mazeData || !this.mazeData.pickups || this.mazeData.pickups.length === 0) return null;
+        let best = null, bd = range;
+        for (const pk of this.mazeData.pickups) {
+            const d = this.player.position.distanceTo(new THREE.Vector3(pk.x, this.player.position.y, pk.z));
+            if (d < bd) { bd = d; best = pk; }
+        }
+        return best;
+    }
+
+    _collectPickup(pk) {
+        const added = this.inventory.addItem({
+            id: 'almond_water', name: '杏仁水', icon: '💧', type: 'consumable',
+            description: '恢复30点生命值并平复理智。流浪者的生命之源。', stackable: true, count: 1,
+            effect: { heal: 30, sanity: 20 }
+        });
+        if (!added) return;
+        this.mazeData.pickups = this.mazeData.pickups.filter(p => p !== pk);
+        for (const c of this.renderer.mazeGroup.children) {
+            if (c.userData && c.userData.pickup && Math.abs(c.position.x - pk.x) < 0.5 && Math.abs(c.position.z - pk.z) < 0.5) {
+                this.renderer.mazeGroup.remove(c);
+            }
+        }
+        this.audio.playCollect();
+        this._refreshInventory();
     }
 
     // 卡出（noclip）：随机传送到邻近层级（f 版设定：Level 0 主要出口方式）

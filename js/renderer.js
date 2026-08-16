@@ -643,6 +643,34 @@ export class GameRenderer {
                     grp.position.set(d.x, 0, d.z);
                     grp.rotation.y = d.rot;
                     single.push(grp);
+                } else if (d.type === 'sea_house') {
+                    // Level 7「深海恐惧」：海中央的孤房
+                    const grp = new THREE.Group();
+                    const wallMat = new THREE.MeshStandardMaterial({ color: 0x6a5a44, roughness: 0.9 });
+                    const roofMat = new THREE.MeshStandardMaterial({ color: 0x3a3a3e, roughness: 0.85 });
+                    for (let i = 0; i < 4; i++) {
+                        const wall = new THREE.Mesh(new THREE.BoxGeometry(9, 3, 0.3), wallMat);
+                        wall.position.set(
+                            i % 2 === 0 ? 0 : (i === 1 ? 4.5 : -4.5),
+                            1.5,
+                            i % 2 === 0 ? (i === 0 ? -4.5 : 4.5) : 0
+                        );
+                        grp.add(wall);
+                    }
+                    const roof = new THREE.Mesh(new THREE.ConeGeometry(7.2, 2.2, 4), roofMat);
+                    roof.position.y = 4.1;
+                    roof.rotation.y = Math.PI / 4;
+                    const floor = new THREE.Mesh(new THREE.BoxGeometry(9.6, 0.4, 9.6), wallMat);
+                    floor.position.y = 0.2;
+                    // 屋里的光（孤房是 Level 7 唯一的亮点）
+                    const winGlow = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.9), new THREE.MeshBasicMaterial({
+                        color: 0xffcc66, transparent: true, opacity: 0.8, side: THREE.DoubleSide
+                    }));
+                    winGlow.position.set(0, 1.6, -4.46);
+                    grp.add(roof, floor, winGlow);
+                    grp.position.set(d.x, 0, d.z);
+                    grp.rotation.y = d.rot;
+                    single.push(grp);
                 }
             }
             this._instanced(unitPillar, pillarMat, pMs, this.decoGroup, true, false);
@@ -691,6 +719,29 @@ export class GameRenderer {
                 }
             }
             this._instanced(unitPlane, waterMat, wm, this.decoGroup, false, true);
+        }
+
+        // ---- 杏仁水补给（f 版核心设定） ----
+        if (mazeData.pickups && mazeData.pickups.length) {
+            for (const pk of mazeData.pickups) {
+                const grp = new THREE.Group();
+                const bottleMat = new THREE.MeshStandardMaterial({
+                    color: 0xd8e8f0, roughness: 0.15, metalness: 0.1, transparent: true, opacity: 0.85
+                });
+                const body = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 0.32, 10), bottleMat);
+                body.position.y = 0.18;
+                const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.08, 8), new THREE.MeshStandardMaterial({ color: 0x2060a0, roughness: 0.4 }));
+                cap.position.y = 0.38;
+                const glow = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 6), new THREE.MeshBasicMaterial({
+                    color: 0x66ccff, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false
+                }));
+                glow.position.y = 0.25;
+                grp.add(body, cap, glow);
+                grp.position.set(pk.x, 0, pk.z);
+                grp.userData.pickup = true;
+                grp.userData.pickupType = pk.type;
+                this.mazeGroup.add(grp);
+            }
         }
 
         // ---- 出口：门框 + 光幕（多出口） ----
