@@ -185,7 +185,7 @@ class BackroomsGame {
         this.audio.stopAmbient();
         this.audio.startAmbient(id);
 
-        document.getElementById('level-indicator').textContent = 'Level ' + id + ' - ' + config.name;
+        document.getElementById('level-indicator').textContent = 'Level ' + id + ' - ' + config.name + '  [' + getSurvivalClassInfo(config.survivalClass).label + ']';
         document.getElementById('flashlight-indicator').classList.add('hidden');
         this.player.flashlightOn = false;
         this._showTransition(config.name, config.description);
@@ -329,6 +329,10 @@ class BackroomsGame {
                     else this.audio.playStep();
                 }
             }
+            // f 版设定：Level 404「层级未找到」——损坏的现实会随机把你传送走
+            if (this.currentLevel === 404 && Math.random() < dt * 0.04) {
+                this._glitchTeleport();
+            }
             const nearby = this.entityManager.getEntitiesInRange(this.player.position, 12);
             if (nearby.length > 0 && Math.random() < 0.03) this.audio.playEntityNearby();
 
@@ -394,6 +398,24 @@ class BackroomsGame {
             hintEl.classList.remove('hidden');
             hintEl.textContent = '火盐掷向虚空...';
             setTimeout(() => { if (!this._nearestPickup(2.2)) hintEl.classList.add('hidden'); }, 1200);
+        }
+    }
+
+    // Level 404 故障传送：随机移动到本层开放位置
+    _glitchTeleport() {
+        const grid = this.mazeData.grid;
+        if (!grid) return;
+        for (let t = 0; t < 80; t++) {
+            const gx = Math.floor(Math.random() * grid.length);
+            const gz = Math.floor(Math.random() * grid[0].length);
+            if (gx < 1 || gx > grid.length - 2 || gz < 1 || gz > grid[0].length - 2) continue;
+            if (grid[gx][gz].walls.some(w => w)) continue;
+            this.player.position.set(gx * 5, this.player.height, gz * 5);
+            this.player.vy = 0;
+            this.player.onGround = true;
+            this.renderer.camera.position.copy(this.player.position);
+            this.audio.playNoclip();
+            break;
         }
     }
 

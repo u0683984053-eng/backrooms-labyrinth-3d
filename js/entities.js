@@ -102,6 +102,7 @@ export class EntityManager {
                     e.attackCd += dt;
                     if (e.attackCd >= e.attackInterval) {
                         player.takeDamage(e.def.damage);
+                        if (this.audio) this.audio.playDamage();
                         e.attackCd = 0;
                         if (e.type === 'burster') { e.alive = false; e.mesh.visible = false; this.renderer.removeEntityMesh(e.mesh); }
                     }

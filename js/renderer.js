@@ -395,6 +395,46 @@ export class GameRenderer {
         // 尘埃粒子：室内层级可见
         if (this.dustPoints) this.dustPoints.visible = !this._outdoor && !dark;
 
+        // Level 12 矩阵（f 版设定）：纯白空间 + 唯一光源
+        if (config.id === 12) {
+            this.wallMat.map = null; this.wallMat.color.set(0xffffff);
+            this.floorMat.map = null; this.floorMat.color.set(0xf0f0f0);
+            this.ceilMat.map = null; this.ceilMat.color.set(0xffffff);
+            this.wallMat.needsUpdate = true; this.floorMat.needsUpdate = true; this.ceilMat.needsUpdate = true;
+            this.ambient.intensity = 1.9;
+            this.hemi.intensity = 0.8;
+            for (const l of this.ceilingLights) l.intensity = 0;
+            this.renderer.toneMappingExposure = 1.4;
+            // 中央白色光源
+            if (!this.matrixLight) {
+                this.matrixLight = new THREE.Mesh(new THREE.SphereGeometry(1.6, 14, 10), new THREE.MeshBasicMaterial({
+                    color: 0xffffff, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false
+                }));
+                this.matrixLight.frustumCulled = false;
+                this.scene.add(this.matrixLight);
+            }
+            this.matrixLight.position.set(this.camera.position.x, 6, this.camera.position.z);
+            this.matrixLight.visible = true;
+        } else {
+            if (this.matrixLight) this.matrixLight.visible = false;
+            // 恢复纹理材质（非矩阵层级）
+            if (this.wallMat.map !== this.texWall) {
+                this.wallMat.map = this.texWall;
+                this.wallMat.color.set(0xffffff);
+                this.wallMat.needsUpdate = true;
+            }
+            if (this.floorMat.map !== this.texFloor) {
+                this.floorMat.map = this.texFloor;
+                this.floorMat.color.set(0xffffff);
+                this.floorMat.needsUpdate = true;
+            }
+            if (this.ceilMat.map !== this.texCeil) {
+                this.ceilMat.map = this.texCeil;
+                this.ceilMat.color.set(0xffffff);
+                this.ceilMat.needsUpdate = true;
+            }
+        }
+
         // f 版设定：Level 6「熄灭」偶发微弱蓝光（黑暗中的幻觉）
         if (!this.blueGlow) {
             this.blueGlow = new THREE.Mesh(new THREE.SphereGeometry(1.2, 10, 8), new THREE.MeshBasicMaterial({
