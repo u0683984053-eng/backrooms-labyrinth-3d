@@ -378,6 +378,24 @@ export class AudioManager {
         this._noise(0.2, 0.4, 200);
     }
 
+    // 雷声（Level 28 风暴石堡）
+    playThunder() {
+        if (!this._ok()) return;
+        const t = this.ctx.currentTime;
+        const o = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        const f = this.ctx.createBiquadFilter();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(60, t);
+        o.frequency.exponentialRampToValueAtTime(24, t + 1.6);
+        f.type = 'lowpass'; f.frequency.value = 120;
+        g.gain.setValueAtTime(0.28, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 1.8);
+        o.connect(f); f.connect(g); g.connect(this.master);
+        o.start(); o.stop(t + 1.9);
+        this._noise(0.15, 0.9, 80);
+    }
+
     // 派对客诡异"音乐"（f 版设定：派对客邀请你参加派对）
     playParty() {
         if (!this._ok()) return;

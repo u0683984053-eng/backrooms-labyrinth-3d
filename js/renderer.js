@@ -346,8 +346,9 @@ export class GameRenderer {
 
         const ds = flags.includes(MazeRenderFlags.DOUBLE_SIDED);
         const wf = flags.includes(MazeRenderFlags.WIREFRAME);
-        // Level 37 泳池房：瓷砖墙面材质（f 版设定：无尽的瓷砖泳池房）
+        // 层级墙面材质覆盖（f 版设定）
         if (config.id === 37) {
+            // 泳池房：瓷砖墙
             if (!this.tileWallMat) {
                 const c = makeCanvas(128, 128);
                 const g = c.getContext('2d');
@@ -360,6 +361,29 @@ export class GameRenderer {
                 this.tileWallMat = new THREE.MeshStandardMaterial({ map: finishTexture(new THREE.CanvasTexture(c), true), roughness: 0.25, metalness: 0.1 });
             }
             this.wallMat = this.tileWallMat;
+        } else if (config.id === 27) {
+            // 木屋：木板墙
+            if (!this.woodWallMat) {
+                const c = makeCanvas(128, 128);
+                const g = c.getContext('2d');
+                g.fillStyle = '#a07840';
+                g.fillRect(0, 0, 128, 128);
+                g.strokeStyle = 'rgba(60,35,10,0.7)';
+                g.lineWidth = 3;
+                for (let x = 0; x <= 128; x += 16) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, 128); g.stroke(); }
+                for (let i = 0; i < 26; i++) {
+                    g.fillStyle = 'rgba(50,30,8,' + (Math.random() * 0.2).toFixed(2) + ')';
+                    g.fillRect(Math.random() * 128, Math.random() * 128, 4 + Math.random() * 10, 2 + Math.random() * 4);
+                }
+                this.woodWallMat = new THREE.MeshStandardMaterial({ map: finishTexture(new THREE.CanvasTexture(c), true), roughness: 0.9 });
+            }
+            this.wallMat = this.woodWallMat;
+        } else if (config.id === 599) {
+            // 红色房间：血红墙面
+            if (!this.redWallMat) {
+                this.redWallMat = new THREE.MeshStandardMaterial({ color: 0x8a2020, roughness: 0.85 });
+            }
+            this.wallMat = this.redWallMat;
         } else {
             this.wallMat.side = ds ? THREE.DoubleSide : THREE.FrontSide;
             this.wallMat.wireframe = wf;
@@ -433,6 +457,22 @@ export class GameRenderer {
                 this.ceilMat.color.set(0xffffff);
                 this.ceilMat.needsUpdate = true;
             }
+        }
+
+        // f 版设定：Level 28「风暴石堡」雷暴闪电
+        if (config.id === 28) {
+            if (!this.thunderFlash) {
+                this.thunderFlash = new THREE.Mesh(new THREE.SphereGeometry(30, 10, 8), new THREE.MeshBasicMaterial({
+                    color: 0xffffff, transparent: true, opacity: 0,
+                    blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide
+                }));
+                this.thunderFlash.frustumCulled = false;
+                this.scene.add(this.thunderFlash);
+            }
+            this._thunderT = 2 + Math.floor(Math.random() * 6);
+        } else if (this.thunderFlash) {
+            this.thunderFlash.material.opacity = 0;
+            this._thunderT = -1;
         }
 
         // f 版设定：Level 6「熄灭」偶发微弱蓝光（黑暗中的幻觉）
@@ -604,7 +644,10 @@ export class GameRenderer {
         // ---- 树木（树干/树冠各 1 个 InstancedMesh） ----
         if (trees && trees.length) {
             const tkm = new THREE.MeshStandardMaterial({ color: 0x4a3020, roughness: 0.95 });
-            const crm = new THREE.MeshStandardMaterial({ color: 0x1f4a10, roughness: 0.9 });
+            // f 版设定：Level 48 猩红森林的树木是血红色的
+            const crm = this.config && this.config.id === 48
+                ? new THREE.MeshStandardMaterial({ color: 0x8a1a10, roughness: 0.9, emissive: 0x200500, emissiveIntensity: 0.25 })
+                : new THREE.MeshStandardMaterial({ color: 0x1f4a10, roughness: 0.9 });
             const tkMs = [], crMs = [];
             for (const t of trees) {
                 tkMs.push(mat(t.x, t.height * 0.25, t.z, _qId, 1, t.height * 0.5, 1));
@@ -1108,6 +1151,25 @@ export class GameRenderer {
                     grp.add(pl, pr, lintel, veil, beam);
                     grp.position.set(d.x, 0, d.z);
                     single.push(grp);
+                } else if (d.type === 'scarecrow') {
+                    // Level 10 丰收：稻草人（f 版设定）
+                    const grp = new THREE.Group();
+                    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 2.4, 6), this.woodDarkMat);
+                    pole.position.y = 1.2;
+                    const arm = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.08, 0.08), this.woodDarkMat);
+                    arm.position.y = 2.0;
+                    const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), new THREE.MeshStandardMaterial({ color: 0xb8a878, roughness: 0.9 }));
+                    head.position.y = 2.45;
+                    // 破衣
+                    const cloth = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.9, 0.1), new THREE.MeshStandardMaterial({ color: 0x5a4a3a, roughness: 0.95 }));
+                    cloth.position.y = 1.5;
+                    // 草帽
+                    const hat = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.38, 0.1, 8), new THREE.MeshStandardMaterial({ color: 0xc8a840, roughness: 0.9 }));
+                    hat.position.y = 2.62;
+                    grp.add(pole, arm, head, cloth, hat);
+                    grp.position.set(d.x, 0, d.z);
+                    grp.rotation.y = d.rot;
+                    single.push(grp);
                 } else if (d.type === 'blackboard') {
                     // Level 52「学校」：教室黑板
                     const grp = new THREE.Group();
@@ -1361,6 +1423,10 @@ export class GameRenderer {
 
     _getFloorMat() {
         if (!this.config) return this.floorMat;
+        // f 版设定：Level 480 海滩 → 沙地
+        if (this.config.id === 480) return this._sandMat || (this._sandMat = new THREE.MeshStandardMaterial({ color: 0xd8c088, roughness: 0.95 }));
+        // f 版设定：Level 666 地狱 → 焦土
+        if (this.config.id === 666) return this._hellMat || (this._hellMat = new THREE.MeshStandardMaterial({ color: 0x2a1a10, roughness: 0.9, emissive: 0x300800, emissiveIntensity: 0.35 }));
         switch (this.config.terrainType) {
             case 'caves': return this._caveMat || (this._caveMat = new THREE.MeshStandardMaterial({ color: 0x4a3a2a, roughness: 0.95, map: this.texFloor }));
             case 'aquatic': return this._aquaMat || (this._aquaMat = new THREE.MeshStandardMaterial({ color: 0x1a3355, roughness: 0.1, metalness: 0.3, transparent: true, opacity: 0.75 }));
@@ -1651,6 +1717,23 @@ export class GameRenderer {
                 this.blueGlow.material.opacity = 0.32 * (this.blueGlowTimer / 24);
             }
         }
+        // Level 28 雷暴闪电（f 版设定：风暴石堡永远笼罩在雷暴中）
+        if (this.thunderFlash && this._thunderT >= 0) {
+            this._thunderT -= 1;
+            if (this._thunderT === 2 || this._thunderT === 1) {
+                this.thunderFlash.material.opacity = 0.9;
+                this._thunderCb && this._thunderCb();
+            } else {
+                this.thunderFlash.material.opacity = 0;
+            }
+            if (this._thunderT <= 0) {
+                this._thunderT = 300 + Math.floor(Math.random() * 500);
+                this._thunderCb = null;
+            }
+        }
         this.renderer.render(this.scene, this.camera);
     }
+
+    // 注册闪电回调（雷声）
+    setThunderCallback(cb) { this._thunderCb = cb; }
 }

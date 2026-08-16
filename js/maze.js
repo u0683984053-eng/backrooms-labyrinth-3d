@@ -338,6 +338,19 @@ export class MazeGenerator {
                 });
                 placed++;
             }
+        } else if (this.config.id === 10) {
+            // Level 10「丰收」：麦田里的稻草人（f 版设定：攻击性稻草人实体）
+            for (let i = 0; i < 4; i++) {
+                const ex = 2 + Math.floor(Math.random() * (this.width - 4));
+                const ey = 2 + Math.floor(Math.random() * (this.height - 4));
+                if (this._cellBlocked(ex, ey, 0)) continue;
+                this.decorations.push({
+                    type: 'scarecrow',
+                    x: ex * this.cellSize + (Math.random() - 0.5) * 3,
+                    z: ey * this.cellSize + (Math.random() - 0.5) * 3,
+                    rot: Math.random() * Math.PI * 2
+                });
+            }
         } else if (this.config.id === 9 || this.config.id === 94) {
             // Level 9 / 94：郊区路灯
             for (let i = 0; i < 18; i++) {
@@ -633,6 +646,63 @@ export class MazeGenerator {
         const cy = Math.floor(H / 2);
         this.startPos.set(cx * this.cellSize, 0, cy * this.cellSize);
         this.exitPos.set((W - 3) * this.cellSize, 0, (H - 3) * this.cellSize);
+        // 连通性保险：BFS 从出生点出发，把封闭区域自动打通（修复隔断交叉导致的死区）
+        this._ensureConnectivityFull(cx, cy);
+    }
+
+    // BFS 连通性修复：所有格子必须从起点可达（迭代打通，直至全连通）
+    _ensureConnectivityFull(sx, sy) {
+        const W = this.width, H = this.height;
+        // [dx, dy, 本格墙索引, 对面格墙索引]（北-南、东-西成对）
+        const dirs = [[0, -1, 0, 2], [1, 0, 1, 3], [0, 1, 2, 0], [-1, 0, 3, 1]];
+        const key = (x, y) => x + ',' + y;
+
+        // 从当前可达集出发做 BFS，返回可达集
+        const flood = (visited) => {
+            const queue = [];
+            for (const k of visited) {
+                const [x, y] = k.split(',').map(Number);
+                queue.push([x, y]);
+            }
+            while (queue.length > 0) {
+                const [x, y] = queue.shift();
+                for (const [dx, dy, wi] of dirs) {
+                    if (this.grid[x][y].walls[wi]) continue;
+                    const nx = x + dx, ny = y + dy;
+                    if (nx < 0 || nx >= W || ny < 0 || ny >= H) continue;
+                    const k = key(nx, ny);
+                    if (!visited.has(k)) { visited.add(k); queue.push([nx, ny]); }
+                }
+            }
+            return visited;
+        };
+
+        // 迭代：每次把紧邻可达区的封闭格打通一面墙并重新蔓延，直到全图连通
+        const visited = new Set([key(sx, sy)]);
+        flood(visited);
+        let rounds = 0;
+        while (visited.size < W * H && rounds < 100) {
+            rounds++;
+            let opened = false;
+            for (let x = 0; x < W && !opened; x++) {
+                for (let y = 0; y < H && !opened; y++) {
+                    const k = key(x, y);
+                    if (visited.has(k)) continue;
+                    for (const [dx, dy, wi, wi2] of dirs) {
+                        const nx = x + dx, ny = y + dy;
+                        if (nx < 0 || nx >= W || ny < 0 || ny >= H) continue;
+                        if (visited.has(key(nx, ny))) {
+                            this.grid[x][y].walls[wi] = false;
+                            this.grid[nx][ny].walls[wi2] = false;
+                            visited.add(k);
+                            opened = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (opened) flood(visited);
+        }
     }
 
     _genCorridors() {
