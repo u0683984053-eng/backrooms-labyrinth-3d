@@ -117,24 +117,64 @@ export class MazeGenerator {
             [TerrainType.HOTEL]: { bed: 6, chair: 4, locker: 6 },
             [TerrainType.HALLS]: { locker: 8 },
             [TerrainType.HOSPITAL]: { bed: 6, locker: 6 },
-            [TerrainType.WAREHOUSE]: { cratepile: 8, shelf: 6 },
+            [TerrainType.WAREHOUSE]: { cratepile: 10, shelf: 8 },
             [TerrainType.PIPES]: { valve: 10 },
             [TerrainType.COMPLEX]: { cratepile: 5, shelf: 10 },
             [TerrainType.INDUSTRIAL]: { cratepile: 4 },
             [TerrainType.ROOMS]: { cratepile: 3 },
         };
         const plan = counts[t];
-        if (!plan) return;
-        for (const [type, n] of Object.entries(plan)) {
-            for (let i = 0; i < n; i++) {
+        if (plan) {
+            for (const [type, n] of Object.entries(plan)) {
+                for (let i = 0; i < n; i++) {
+                    const ex = 2 + Math.floor(Math.random() * (this.width - 4));
+                    const ey = 2 + Math.floor(Math.random() * (this.height - 4));
+                    if (this._cellBlocked(ex, ey, 1)) continue;
+                    const jx = ex * this.cellSize + (Math.random() - 0.5) * 2;
+                    const jz = ey * this.cellSize + (Math.random() - 0.5) * 2;
+                    let rot = Math.floor(Math.random() * 4) * (Math.PI / 2);
+                    if (type === 'valve') rot = Math.random() * Math.PI * 2;
+                    this.decorations.push({ type, x: jx, z: jz, rot });
+                }
+            }
+        }
+
+        // 层级专属装饰（f 版设定）
+        const lv = this.config.id;
+        if (lv === 188) {
+            // Level 188「窗户」：走廊两侧展示不可能景观的发光窗
+            for (let i = 0; i < 14; i++) {
                 const ex = 2 + Math.floor(Math.random() * (this.width - 4));
                 const ey = 2 + Math.floor(Math.random() * (this.height - 4));
-                if (this._cellBlocked(ex, ey, 1)) continue;
-                const jx = ex * this.cellSize + (Math.random() - 0.5) * 2;
-                const jz = ey * this.cellSize + (Math.random() - 0.5) * 2;
-                let rot = Math.floor(Math.random() * 4) * (Math.PI / 2);
-                if (type === 'valve') rot = Math.random() * Math.PI * 2;
-                this.decorations.push({ type, x: jx, z: jz, rot });
+                const wallDir = Math.floor(Math.random() * 4);
+                const jx = ex * this.cellSize;
+                const jz = ey * this.cellSize;
+                this.decorations.push({ type: 'windowframe', x: jx, z: jz, rot: wallDir });
+            }
+        } else if (lv === 10) {
+            // Level 10「丰收」：无尽麦田中的干草堆
+            for (let i = 0; i < 12; i++) {
+                const ex = 2 + Math.floor(Math.random() * (this.width - 4));
+                const ey = 2 + Math.floor(Math.random() * (this.height - 4));
+                this.decorations.push({
+                    type: 'haystack',
+                    x: ex * this.cellSize + (Math.random() - 0.5) * 3,
+                    z: ey * this.cellSize + (Math.random() - 0.5) * 3,
+                    rot: Math.random() * Math.PI * 2,
+                    h: 1.4 + Math.random() * 1.2
+                });
+            }
+        } else if (lv === 3) {
+            // Level 3「电气站」：裸露的电箱（贴墙放置，无需空地）
+            for (let i = 0; i < 8; i++) {
+                const ex = 1 + Math.floor(Math.random() * (this.width - 2));
+                const ey = 1 + Math.floor(Math.random() * (this.height - 2));
+                this.decorations.push({
+                    type: 'electricbox',
+                    x: ex * this.cellSize,
+                    z: ey * this.cellSize,
+                    rot: Math.floor(Math.random() * 4) * (Math.PI / 2)
+                });
             }
         }
     }

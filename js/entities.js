@@ -2,8 +2,9 @@ import * as THREE from 'three';
 import { getEntityDef } from './config.js';
 
 export class EntityManager {
-    constructor(renderer) {
+    constructor(renderer, audio) {
         this.renderer = renderer;
+        this.audio = audio || null;
         this.entities = [];
         this.timer = 0;
     }
@@ -45,6 +46,34 @@ export class EntityManager {
             if (!e.alive) continue;
             const dist = e.pos.distanceTo(player.position);
             const effDet = e.detectionR * (1 + (player.noise || 0)) * (player.flashlightOn ? 1.8 : 1);
+
+            // ---- f 版设定：死亡蛾是趋光的无害飞蛾，绕光源/玩家盘旋 ----
+            if (e.type === 'deathmoth') {
+                e.flyAngle = (e.flyAngle || Math.random() * Math.PI * 2) + dt * 2.2;
+                const r = 4 + Math.sin(e.flyAngle * 0.7) * 2.5;
+                e.pos.set(
+                    player.position.x + Math.cos(e.flyAngle) * r,
+                    2.0 + Math.sin(e.flyAngle * 1.3) * 0.9,
+                    player.position.z + Math.sin(e.flyAngle) * r
+                );
+                e.mesh.position.copy(e.pos);
+                e.mesh.rotation.y = -e.flyAngle + Math.PI / 2;
+                continue;
+            }
+
+            // ---- f 版设定：恐惧音效与理智侵蚀 ----
+            if (e.state === 'chase' || e.state === 'attack') {
+                e.soundTimer = (e.soundTimer || 0) - dt;
+                if (e.soundTimer <= 0) {
+                    if (e.type === 'hound' && this.audio) this.audio.playBark();
+                    if (e.type === 'scratcher' && this.audio) this.audio.playScratch();
+                    e.soundTimer = 4 + Math.random() * 3;
+                }
+                // 微笑者：被其注视会加速理智流失（f 版设定）
+                if (e.type === 'smiler' && dist < 12) {
+                    player.sanity = Math.max(0, player.sanity - 4 * dt);
+                }
+            }
 
             switch (e.state) {
                 case 'idle':

@@ -28,6 +28,8 @@ export class Player {
         this.onGround = true;
         this.isMoving = false;
         this.platforms = [];
+        // 理智流失速率（黑暗层级更高，f 版设定：心理危害）
+        this.sanityDrain = 0.3;
     }
 
     update(dt, input, grid, cellSize, platforms) {
@@ -122,7 +124,7 @@ export class Player {
         this.position.copy(rp);
         this.camera.position.copy(this.position);
 
-        this.sanity = Math.max(0, this.sanity - 0.3 * dt);
+        this.sanity = Math.max(0, this.sanity - (this.sanityDrain || 0.3) * dt);
         this._tickEffects(dt);
     }
 

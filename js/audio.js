@@ -118,4 +118,54 @@ export class AudioManager {
         o.connect(g); g.connect(this.master);
         o.start(); o.stop(t + dur);
     }
+
+    // 猎犬吠叫（f 版设定：猎犬会发出类似犬吠的叫声）
+    playBark() {
+        if (!this.enabled) return;
+        const t = this.ctx.currentTime;
+        const o = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        const f = this.ctx.createBiquadFilter();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(160, t);
+        o.frequency.exponentialRampToValueAtTime(70, t + 0.35);
+        f.type = 'lowpass'; f.frequency.value = 500;
+        g.gain.setValueAtTime(0.18, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+        o.connect(f); f.connect(g); g.connect(this.master);
+        o.start(); o.stop(t + 0.45);
+    }
+
+    // 抓挠者刮墙（f 版设定：长爪刮擦墙壁的声响）
+    playScratch() {
+        if (!this.enabled) return;
+        const t = this.ctx.currentTime;
+        const o = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        const f = this.ctx.createBiquadFilter();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(2200, t);
+        o.frequency.linearRampToValueAtTime(800, t + 0.15);
+        f.type = 'bandpass'; f.frequency.value = 1800; f.Q.value = 8;
+        g.gain.setValueAtTime(0.1, t);
+        g.gain.linearRampToValueAtTime(0, t + 0.2);
+        o.connect(f); f.connect(g); g.connect(this.master);
+        o.start(); o.stop(t + 0.22);
+    }
+
+    // 卡出（noclip）音效：低频轰鸣 + 噪声
+    playNoclip() {
+        if (!this.enabled) return;
+        const t = this.ctx.currentTime;
+        const o = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(60, t);
+        o.frequency.exponentialRampToValueAtTime(24, t + 1.2);
+        g.gain.setValueAtTime(0.3, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 1.4);
+        o.connect(g); g.connect(this.master);
+        o.start(); o.stop(t + 1.5);
+        this._noise(0.12, 1.0, 90);
+    }
 }

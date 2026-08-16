@@ -590,6 +590,59 @@ export class GameRenderer {
                     grp.position.set(d.x, 0, d.z);
                     grp.rotation.y = d.rot;
                     single.push(grp);
+                } else if (d.type === 'windowframe') {
+                    // Level 188「窗户」：展示不可能景观的发光窗
+                    const grp = new THREE.Group();
+                    const frameMat = new THREE.MeshStandardMaterial({ color: 0x3a3a3e, roughness: 0.5, metalness: 0.5 });
+                    const top = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.12, 0.14), frameMat);
+                    top.position.y = 2.5;
+                    const bot = top.clone(); bot.position.y = 0.9;
+                    const l = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.6, 0.14), frameMat);
+                    l.position.set(-1.04, 1.7, 0);
+                    const r = l.clone(); r.position.x = 1.04;
+                    const glow = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 1.35), new THREE.MeshBasicMaterial({
+                        color: 0x88ccff, transparent: true, opacity: 0.35,
+                        blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide
+                    }));
+                    glow.position.set(0, 1.7, 0);
+                    grp.add(top, bot, l, r, glow);
+                    // 窗内景观：微光（不可能的天空）
+                    const sky = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 1.25), new THREE.MeshBasicMaterial({
+                        color: 0x224466, transparent: true, opacity: 0.8, side: THREE.DoubleSide
+                    }));
+                    sky.position.set(0, 1.7, -0.01);
+                    grp.add(sky);
+                    grp.position.set(d.x, 0, d.z);
+                    grp.rotation.y = d.rot * (Math.PI / 2);
+                    single.push(grp);
+                } else if (d.type === 'haystack') {
+                    // Level 10「丰收」：干草堆
+                    const grp = new THREE.Group();
+                    const h = d.h || 1.6;
+                    const strawMat = new THREE.MeshStandardMaterial({ color: 0xc8a840, roughness: 0.95 });
+                    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.1, h * 0.7, 9), strawMat);
+                    base.position.y = h * 0.35;
+                    const top2 = new THREE.Mesh(new THREE.ConeGeometry(0.55, h * 0.6, 9), strawMat);
+                    top2.position.y = h * 0.75;
+                    grp.add(base, top2);
+                    grp.position.set(d.x, 0, d.z);
+                    grp.rotation.y = d.rot;
+                    single.push(grp);
+                } else if (d.type === 'electricbox') {
+                    // Level 3「电气站」：裸露电箱 + 警示灯
+                    const grp = new THREE.Group();
+                    const box = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.3, 0.5), this.metalMat);
+                    box.position.y = 1.15;
+                    const light = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), new THREE.MeshBasicMaterial({
+                        color: 0xff3020, transparent: true, opacity: 0.9
+                    }));
+                    light.position.set(0, 1.85, 0.28);
+                    const wire = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.8, 5), new THREE.MeshStandardMaterial({ color: 0x1a1a1e, roughness: 0.8 }));
+                    wire.position.set(0.4, 1.6, 0);
+                    grp.add(box, light, wire);
+                    grp.position.set(d.x, 0, d.z);
+                    grp.rotation.y = d.rot;
+                    single.push(grp);
                 }
             }
             this._instanced(unitPillar, pillarMat, pMs, this.decoGroup, true, false);

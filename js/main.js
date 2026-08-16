@@ -6,7 +6,7 @@ import { InputManager } from './input.js';
 import { EntityManager } from './entities.js';
 import { Inventory } from './inventory.js';
 import { AudioManager } from './audio.js';
-import { getLevelConfig, getDetailedLevels } from './config.js';
+import { getLevelConfig, getDetailedLevels, MazeRenderFlags } from './config.js';
 
 class BackroomsGame {
     constructor() {
@@ -16,7 +16,7 @@ class BackroomsGame {
         this.player = new Player(this.renderer.camera);
         this.inventory = new Inventory(15);
         this.audio = new AudioManager();
-        this.entityManager = new EntityManager(this.renderer);
+        this.entityManager = new EntityManager(this.renderer, this.audio);
 
         this.currentLevel = 0;
         this.mazeData = null;
@@ -28,6 +28,7 @@ class BackroomsGame {
         this.transitioning = false;
         this._dead = false;
         this.stepTimer = 0;
+        this.noclipHeld = 0;
 
         this._setupUI();
         this._initAudio();
@@ -125,6 +126,11 @@ class BackroomsGame {
         this.renderer.camera.position.copy(this.player.position);
         this._faceOpenDirection();
 
+        // f 版设定：黑暗层级心理危害更大 → 理智流失加速
+        const flags = config.renderFlags || [];
+        this.player.sanityDrain = flags.includes(MazeRenderFlags.DARKNESS) ? 1.0 : 0.3;
+        this.player.sanity = Math.max(30, this.player.sanity);
+
         this.entityManager.spawnEntities(this.mazeData.entitySpawns);
         this.audio.stopAmbient();
         this.audio.startAmbient(id);
@@ -187,6 +193,23 @@ class BackroomsGame {
             this.entityManager.update(dt, this.player);
             this._checkExit();
 
+            // f 版设定：卡出（noclip）——按住 E 从现实中卡出
+            if (this.input.isPressed('KeyE')) {
+                this.noclipHeld += dt;
+                const hint = document.getElementById('interaction-hint');
+                hint.classList.remove('hidden');
+                hint.textContent = '卡出中... ' + Math.min(100, Math.floor(this.noclipHeld / 1.2 * 100)) + '%';
+                if (this.noclipHeld >= 1.2) {
+                    this.noclipHeld = 0;
+                    this._noclip();
+                }
+            } else {
+                if (this.noclipHeld > 0) {
+                    this.noclipHeld = 0;
+                    document.getElementById('interaction-hint').classList.add('hidden');
+                }
+            }
+
             const iv = this.input.getInputVector();
             if ((Math.abs(iv.forward) > 0.01 || Math.abs(iv.right) > 0.01)) {
                 this.stepTimer += dt;
@@ -201,6 +224,19 @@ class BackroomsGame {
 
         this._updateHUD();
         this.renderer.render();
+    }
+
+    // 卡出（noclip）：随机传送到邻近层级（f 版设定：Level 0 主要出口方式）
+    _noclip() {
+        this.audio.playNoclip();
+        const delta = 5 + Math.floor(Math.random() * 26);
+        let target = this.currentLevel + (Math.random() < 0.5 ? delta : -delta);
+        target = Math.max(0, Math.min(1000, target));
+        if (target === this.currentLevel) target = Math.min(1000, target + 1);
+        this._loadLevel(target);
+        // 覆盖过渡文字
+        document.getElementById('transition-level-name').textContent = '现 实 裂 隙';
+        document.getElementById('transition-level-desc').textContent = '你从现实中卡了出去... 来到了 Level ' + target;
     }
 
     _checkExit() {
@@ -286,6 +322,15 @@ class BackroomsGame {
         document.getElementById('sanity-indicator').textContent = '理智: ' + Math.ceil(this.player.sanity) + '%';
         document.getElementById('position-indicator').textContent =
             'X: ' + Math.round(this.player.position.x) + ' Z: ' + Math.round(this.player.position.z);
+
+        // f 版设定：理智过低时出现血色暗角（心理危害的视觉反馈）
+        const so = document.getElementById('sanity-overlay');
+        if (so) {
+            const s = this.player.sanity;
+            let op = 0;
+            if (s < 40) op = ((40 - s) / 40) * 0.6;
+            so.style.opacity = op.toFixed(3);
+        }
 
         const se = document.getElementById('status-effects');
         se.innerHTML = '';
