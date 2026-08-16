@@ -1,0 +1,109 @@
+import * as THREE from 'three';
+import { getEntityDef } from './config.js';
+
+export class EntityManager {
+    constructor(renderer) {
+        this.renderer = renderer;
+        this.entities = [];
+        this.timer = 0;
+    }
+
+    spawnEntities(spawnData) {
+        this.clear();
+        if (!spawnData || spawnData.length === 0) return;
+        for (const sd of spawnData) {
+            const def = getEntityDef(sd.type);
+            if (!def) continue;
+            const mesh = this.renderer.createEntityMesh(sd.type);
+            mesh.position.set(sd.x, 1, sd.z);
+            mesh.castShadow = true;
+            this.renderer.addEntityMesh(mesh);
+            this.entities.push({
+                type: sd.type, def, mesh,
+                pos: new THREE.Vector3(sd.x, 1, sd.z),
+                spawn: new THREE.Vector3(sd.x, 1, sd.z),
+                patrolR: sd.patrolRadius || 10,
+                state: 'idle',
+                target: new THREE.Vector3(),
+                speed: def.speed, health: def.health,
+                detectionR: def.detectionRadius,
+                chaseTimer: 0, maxChaseDur: def.chaseDuration,
+                attackCd: 0, attackInterval: 1.5,
+                patrolTimer: 0, patrolDest: new THREE.Vector3(),
+                alive: true,
+            });
+        }
+    }
+
+    update(dt, player) {
+        if (!player.alive) return;
+        this.timer += dt;
+        if (this.timer < 0.1) { this.entities.forEach(e => { if (e.alive) e.mesh.position.copy(e.pos); }); return; }
+        this.timer = 0;
+
+        for (const e of this.entities) {
+            if (!e.alive) continue;
+            const dist = e.pos.distanceTo(player.position);
+            const effDet = e.detectionR * (1 + (player.noise || 0)) * (player.flashlightOn ? 1.8 : 1);
+
+            switch (e.state) {
+                case 'idle':
+                    if (dist < effDet) { e.state = 'alert'; e.target.copy(player.position); }
+                    else if (Math.random() < 0.02) { e.state = 'patrol'; this._patrolTarget(e); }
+                    break;
+                case 'patrol':
+                    if (dist < effDet) { e.state = 'alert'; break; }
+                    this._moveTo(e, e.patrolDest, e.speed * 0.4 * dt * 10);
+                    e.patrolTimer -= dt;
+                    if (e.patrolTimer <= 0 || e.pos.distanceTo(e.patrolDest) < 1.5) e.state = 'idle';
+                    break;
+                case 'alert':
+                    e.state = 'chase'; e.chaseTimer = 0;
+                    break;
+                case 'chase':
+                    if (dist > effDet * 1.5 && e.chaseTimer > 3) { e.state = 'idle'; break; }
+                    e.chaseTimer += dt;
+                    if (e.chaseTimer > e.maxChaseDur) { e.state = 'idle'; break; }
+                    e.target.copy(player.position);
+                    this._moveTo(e, player.position, e.speed * 1.2 * dt * 10);
+                    if (dist < 1.5) { e.state = 'attack'; e.attackCd = 0; }
+                    break;
+                case 'attack':
+                    e.attackCd += dt;
+                    if (e.attackCd >= e.attackInterval) {
+                        player.takeDamage(e.def.damage);
+                        e.attackCd = 0;
+                        if (e.type === 'burster') { e.alive = false; e.mesh.visible = false; this.renderer.removeEntityMesh(e.mesh); }
+                    }
+                    if (dist > 3) e.state = 'chase';
+                    break;
+            }
+        }
+        this.entities = this.entities.filter(e => e.alive);
+    }
+
+    _moveTo(e, target, amount) {
+        const d = new THREE.Vector3().subVectors(target, e.pos); d.y = 0;
+        const len = d.length(); if (len < 0.1) return;
+        d.normalize();
+        e.pos.addScaledVector(d, Math.min(amount, len));
+        e.mesh.position.copy(e.pos);
+        e.mesh.lookAt(e.pos.x + d.x, e.pos.y, e.pos.z + d.z);
+    }
+
+    _patrolTarget(e) {
+        const a = Math.random() * Math.PI * 2;
+        const r = e.patrolR * (0.3 + Math.random() * 0.7);
+        e.patrolDest.set(e.spawn.x + Math.cos(a) * r, e.spawn.y, e.spawn.z + Math.sin(a) * r);
+        e.patrolTimer = 3 + Math.random() * 8;
+    }
+
+    clear() {
+        for (const e of this.entities) this.renderer.removeEntityMesh(e.mesh);
+        this.entities = [];
+    }
+
+    getEntitiesInRange(pos, range) {
+        return this.entities.filter(e => e.alive && e.pos.distanceTo(pos) <= range);
+    }
+}

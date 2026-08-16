@@ -1,0 +1,308 @@
+import * as THREE from 'three';
+import { GameRenderer } from './renderer.js';
+import { MazeGenerator } from './maze.js';
+import { Player } from './player.js';
+import { InputManager } from './input.js';
+import { EntityManager } from './entities.js';
+import { Inventory } from './inventory.js';
+import { AudioManager } from './audio.js';
+import { getLevelConfig, getDetailedLevels } from './config.js';
+
+class BackroomsGame {
+    constructor() {
+        this.canvas = document.getElementById('game-canvas');
+        this.renderer = new GameRenderer(this.canvas);
+        this.input = new InputManager(this.canvas);
+        this.player = new Player(this.renderer.camera);
+        this.inventory = new Inventory(15);
+        this.audio = new AudioManager();
+        this.entityManager = new EntityManager(this.renderer);
+
+        this.currentLevel = 0;
+        this.mazeData = null;
+        this.isRunning = false;
+        this.prevTime = 0;
+        this.flickerTime = 0;
+        this.backpackOpen = false;
+        this.cheatOpen = false;
+        this.transitioning = false;
+        this._dead = false;
+        this.stepTimer = 0;
+
+        this._setupUI();
+        this._initAudio();
+        this._showLoading();
+        // 调试钩子（无害）：暴露实例便于外部检查渲染状态
+        window.__game = this;
+    }
+
+    async _initAudio() { await this.audio.init(); }
+
+    _showLoading() {
+        const bar = document.querySelector('.loading-bar-fill');
+        const txt = document.getElementById('loading-text');
+        let p = 0;
+        const iv = setInterval(() => {
+            p += Math.random() * 12;
+            if (p >= 100) {
+                p = 100;
+                clearInterval(iv);
+                document.getElementById('loading-screen').classList.add('hidden');
+                document.getElementById('start-screen').classList.remove('hidden');
+            }
+            bar.style.width = p + '%';
+            txt.textContent = '加载中... ' + Math.floor(p) + '%';
+        }, 180);
+    }
+
+    _setupUI() {
+        document.getElementById('btn-start').addEventListener('click', () => this.startGame());
+        document.getElementById('btn-respawn').addEventListener('click', () => this.respawn());
+        document.getElementById('btn-close-backpack').addEventListener('click', () => this.toggleBackpack(false));
+        document.getElementById('btn-close-cheat').addEventListener('click', () => this.toggleCheat(false));
+        document.getElementById('btn-cheat-go').addEventListener('click', () => this._cheatGo());
+        this.input.on('keydown', e => this._onKeyDown(e));
+    }
+
+    _onKeyDown(e) {
+        if (!this.isRunning) return;
+
+        if (e.code === 'KeyB' || e.code === 'KeyI') {
+            if (!this.cheatOpen) this.toggleBackpack(!this.backpackOpen);
+            return;
+        }
+        if (e.code === 'Backquote') { this.toggleCheat(!this.cheatOpen); return; }
+        if (e.code === 'KeyF' && !this.backpackOpen && !this.cheatOpen) {
+            this.player.toggleFlashlight();
+            document.getElementById('flashlight-indicator').classList.toggle('hidden', !this.player.flashlightOn);
+        }
+        if (e.code === 'KeyC' && !e.ctrlKey && !this.backpackOpen && !this.cheatOpen)
+            this.player.crouch(!this.player.isCrouching);
+        if (e.code === 'Escape') {
+            if (this.backpackOpen) this.toggleBackpack(false);
+            if (this.cheatOpen) this.toggleCheat(false);
+        }
+
+        const slotKeys = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5'];
+        const si = slotKeys.indexOf(e.code);
+        if (si >= 0 && !this.backpackOpen && !this.cheatOpen) {
+            this.inventory.useItem(si, this.player);
+            this._refreshInventory();
+        }
+
+        if (this.backpackOpen && e.code === 'Enter' && this.inventory.selectedIndex >= 0) {
+            this.inventory.useItem(this.inventory.selectedIndex, this.player);
+            this._refreshInventory();
+            this.toggleBackpack(false);
+        }
+        if (this.backpackOpen) {
+            if (e.code === 'ArrowLeft') this._navInv(-1);
+            if (e.code === 'ArrowRight') this._navInv(1);
+        }
+    }
+
+    startGame() {
+        document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('hud').classList.remove('hidden');
+        this.isRunning = true;
+        this._loadLevel(0);
+        this.input.requestLock();
+        this.prevTime = performance.now();
+        this._loop(performance.now());
+    }
+
+    _loadLevel(id) {
+        const config = getLevelConfig(id);
+        this.currentLevel = id;
+        const gen = new MazeGenerator(config);
+        this.mazeData = gen.generate();
+
+        this.renderer.setLevelConfig(config);
+        this.renderer.buildMaze(this.mazeData);
+
+        this.player.position.copy(this.mazeData.startPos);
+        this.player.position.y = this.player.height;
+        this.renderer.camera.position.copy(this.player.position);
+
+        this.entityManager.spawnEntities(this.mazeData.entitySpawns);
+        this.audio.stopAmbient();
+        this.audio.startAmbient(id);
+
+        document.getElementById('level-indicator').textContent = 'Level ' + id + ' - ' + config.name;
+        document.getElementById('flashlight-indicator').classList.add('hidden');
+        this.player.flashlightOn = false;
+        this._showTransition(config.name, config.description);
+        this._refreshInventory();
+    }
+
+    _showTransition(name, desc) {
+        const ov = document.getElementById('level-transition');
+        document.getElementById('transition-level-name').textContent = name;
+        document.getElementById('transition-level-desc').textContent = desc;
+        ov.classList.remove('hidden');
+        this.transitioning = true;
+        setTimeout(() => { ov.classList.add('hidden'); this.transitioning = false; }, 1800);
+    }
+
+    _loop(time) {
+        if (!this.isRunning) return;
+        requestAnimationFrame(t => this._loop(t));
+        const dt = Math.min((time - this.prevTime) / 1000, 0.1);
+        this.prevTime = time;
+        this.flickerTime += dt;
+
+        if (this.transitioning) { this.renderer.render(); return; }
+
+        const uiOpen = this.backpackOpen || this.cheatOpen;
+        if (!uiOpen && !this._dead) {
+            this.player.update(dt, this.input, this.mazeData ? this.mazeData.grid : null, 5, this.mazeData ? this.mazeData.platforms : null);
+            this.renderer.updateFlashlight(this.player, this.flickerTime);
+            this.entityManager.update(dt, this.player);
+            this._checkExit();
+
+            const iv = this.input.getInputVector();
+            if ((Math.abs(iv.forward) > 0.01 || Math.abs(iv.right) > 0.01)) {
+                this.stepTimer += dt;
+                const interval = this.player.isCrouching ? 0.6 : this.player.stamina > 0 && this.input.isSprinting() ? 0.25 : 0.45;
+                if (this.stepTimer >= interval) { this.stepTimer = 0; this.audio.playStep(); }
+            }
+            const nearby = this.entityManager.getEntitiesInRange(this.player.position, 12);
+            if (nearby.length > 0 && Math.random() < 0.03) this.audio.playEntityNearby();
+
+            if (!this.player.alive) { this._dead = true; this._onDeath(); }
+        }
+
+        this._updateHUD();
+        this.renderer.render();
+    }
+
+    _checkExit() {
+        if (!this.mazeData || !this.mazeData.exitPos) return;
+        const d = this.player.position.distanceTo(
+            new THREE.Vector3(this.mazeData.exitPos.x, this.player.position.y, this.mazeData.exitPos.z)
+        );
+        if (d < 2 && this.currentLevel < 1000) {
+            this.audio.playTransition();
+            this._loadLevel(this.currentLevel + 1);
+        }
+    }
+
+    _onDeath() {
+        document.getElementById('hud').classList.add('hidden');
+        document.getElementById('death-screen').classList.remove('hidden');
+        this.input.releaseLock();
+        this.audio.stopAmbient();
+    }
+
+    respawn() {
+        this._dead = false;
+        document.getElementById('death-screen').classList.add('hidden');
+        document.getElementById('hud').classList.remove('hidden');
+        this.player.respawn(new THREE.Vector3(
+            this.mazeData.startPos.x, 0, this.mazeData.startPos.z
+        ));
+        this._loadLevel(this.currentLevel);
+        this.input.requestLock();
+    }
+
+    toggleBackpack(open) {
+        this.backpackOpen = open;
+        document.getElementById('backpack-modal').classList.toggle('hidden', !open);
+        this.input.setUIOpen(open);
+        if (open) { this.input.releaseLock(); this._refreshInventory(); }
+    }
+
+    toggleCheat(open) {
+        this.cheatOpen = open;
+        document.getElementById('cheat-modal').classList.toggle('hidden', !open);
+        this.input.setUIOpen(open);
+        if (open) { this.input.releaseLock(); this._popCheatList(); document.getElementById('cheat-level-input').focus(); }
+    }
+
+    _popCheatList() {
+        const list = document.getElementById('cheat-level-list');
+        list.innerHTML = '';
+        const det = getDetailedLevels();
+        for (let i = 0; i <= 1000; i++) {
+            const btn = document.createElement('button');
+            btn.className = 'cheat-level-btn' + (det.includes(i) ? ' detailed' : '');
+            btn.textContent = i;
+            btn.addEventListener('click', () => this._cheatGoTo(i));
+            list.appendChild(btn);
+        }
+    }
+
+    _cheatGo() {
+        const v = parseInt(document.getElementById('cheat-level-input').value);
+        if (!isNaN(v) && v >= 0 && v <= 1000) this._cheatGoTo(v);
+    }
+
+    _cheatGoTo(level) {
+        this.toggleCheat(false);
+        this.audio.playTransition();
+        this._loadLevel(level);
+        setTimeout(() => this.input.requestLock(), 300);
+    }
+
+    _updateHUD() {
+        document.getElementById('health-bar-fill').style.width = this.player.health + '%';
+        document.getElementById('health-text').textContent = Math.ceil(this.player.health);
+        document.getElementById('stamina-bar-fill').style.width = this.player.stamina + '%';
+        document.getElementById('stamina-text').textContent = Math.ceil(this.player.stamina);
+        document.getElementById('sanity-indicator').textContent = '理智: ' + Math.ceil(this.player.sanity) + '%';
+        document.getElementById('position-indicator').textContent =
+            'X: ' + Math.round(this.player.position.x) + ' Z: ' + Math.round(this.player.position.z);
+
+        const se = document.getElementById('status-effects');
+        se.innerHTML = '';
+        for (const e of this.player.statusEffects) {
+            const d = document.createElement('div');
+            d.className = 'status-effect';
+            d.style.borderColor = e.color || '#888';
+            d.textContent = e.name;
+            se.appendChild(d);
+        }
+    }
+
+    _refreshInventory() {
+        const grid = document.getElementById('inventory-grid');
+        grid.innerHTML = '';
+        const items = this.inventory.getItems();
+        for (let i = 0; i < this.inventory.maxSlots; i++) {
+            const slot = document.createElement('div');
+            slot.className = 'inventory-slot' + (i >= items.length ? ' empty' : '') + (i === this.inventory.selectedIndex ? ' selected' : '');
+            if (i < items.length) {
+                const item = items[i];
+                slot.textContent = item.icon;
+                if (item.stackable && item.count > 1) {
+                    const c = document.createElement('span');
+                    c.className = 'count'; c.textContent = item.count;
+                    slot.appendChild(c);
+                }
+                slot.addEventListener('click', () => { this.inventory.selectItem(i); this._refreshInventory(); this._showItemDetails(item); });
+                slot.addEventListener('dblclick', () => { this.inventory.useItem(i, this.player); this._refreshInventory(); });
+            }
+            grid.appendChild(slot);
+        }
+    }
+
+    _showItemDetails(item) {
+        const d = document.getElementById('inventory-details');
+        d.innerHTML = item
+            ? '<p><strong>' + item.name + '</strong> ' + item.icon + '</p><p>' + item.description + '</p>' + (item.stackable ? '<p>数量: ' + item.count + '</p>' : '')
+            : '<p>选择一个物品查看详情</p>';
+    }
+
+    _navInv(dir) {
+        const items = this.inventory.getItems();
+        if (items.length === 0) return;
+        let idx = this.inventory.selectedIndex + dir;
+        if (idx < 0) idx = items.length - 1;
+        if (idx >= items.length) idx = 0;
+        this.inventory.selectItem(idx);
+        this._refreshInventory();
+        this._showItemDetails(items[idx]);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => { new BackroomsGame(); });

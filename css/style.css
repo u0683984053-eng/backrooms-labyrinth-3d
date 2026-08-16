@@ -1,0 +1,318 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #000;
+    overflow: hidden;
+    font-family: "Microsoft YaHei", "微软雅黑", "SimHei", sans-serif;
+    color: #c8c8a0;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+#game-container {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+}
+
+#game-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: #0a0a05;
+}
+
+.overlay, .modal {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+
+.hidden { display: none !important; }
+
+/* 加载画面 */
+#loading-screen {
+    background: #050503;
+    z-index: 200;
+}
+.loading-content {
+    text-align: center;
+    padding: 40px;
+}
+.loading-content h1 {
+    font-size: 2.8rem;
+    letter-spacing: 0.5em;
+    color: #e8d88a;
+    text-shadow: 0 0 30px rgba(200,180,60,0.6);
+    margin-bottom: 30px;
+}
+.loading-bar-bg {
+    width: 360px;
+    height: 8px;
+    background: #1a1a10;
+    border: 1px solid #444;
+    margin: 0 auto 20px;
+}
+.loading-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: #c8c860;
+    transition: width 0.3s;
+}
+#loading-text {
+    color: #888;
+    font-size: 0.9rem;
+}
+
+/* 开始画面 */
+#start-screen { background: rgba(0,0,0,0.92); }
+.start-content {
+    text-align: center;
+    padding: 60px;
+}
+.start-content h1 {
+    font-size: 3.2rem;
+    letter-spacing: 0.6em;
+    color: #e8d88a;
+    text-shadow: 0 0 30px rgba(200,180,60,0.6);
+    margin-bottom: 10px;
+}
+.subtitle {
+    color: #776;
+    font-style: italic;
+    margin-bottom: 40px;
+    font-size: 1rem;
+}
+.hint {
+    color: #555;
+    font-size: 0.8rem;
+    margin-top: 12px;
+    letter-spacing: 0.05em;
+}
+
+/* 按钮 */
+.btn-primary {
+    background: #2a2a0a;
+    color: #e8d88a;
+    border: 1px solid #6a6a30;
+    padding: 12px 40px;
+    font-family: inherit;
+    font-size: 1.1rem;
+    cursor: pointer;
+    letter-spacing: 0.3em;
+    transition: all 0.2s;
+}
+.btn-primary:hover {
+    background: #3a3a10;
+    border-color: #c8c860;
+    box-shadow: 0 0 20px rgba(200,180,60,0.4);
+}
+.btn-secondary {
+    background: #1a1a0a;
+    color: #a0a080;
+    border: 1px solid #444;
+    padding: 8px 30px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    cursor: pointer;
+    letter-spacing: 0.15em;
+    transition: all 0.2s;
+}
+.btn-secondary:hover { border-color: #888; color: #e8d88a; }
+
+/* HUD */
+#hud {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 10;
+}
+#hud-top {
+    position: absolute;
+    top: 20px; left: 20px;
+    display: flex;
+    gap: 15px;
+}
+#health-bar-container, #stamina-bar-container {
+    width: 200px; height: 18px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid #444;
+    position: relative;
+}
+#health-bar-fill {
+    height: 100%; width: 100%;
+    background: linear-gradient(90deg, #602020, #c04040);
+    transition: width 0.3s;
+}
+#stamina-bar-fill {
+    height: 100%; width: 100%;
+    background: linear-gradient(90deg, #206020, #40c040);
+    transition: width 0.3s;
+}
+#health-text, #stamina-text {
+    position: absolute;
+    top: 0; left: 5px;
+    font-size: 0.7rem; line-height: 18px;
+    color: #fff;
+    text-shadow: 0 0 3px #000;
+}
+#hud-bottom {
+    position: absolute;
+    bottom: 20px; left: 20px;
+    display: flex; gap: 30px;
+    font-size: 0.8rem;
+    color: #888;
+    text-shadow: 0 0 5px #000;
+}
+#level-indicator { color: #c8c860; font-weight: bold; }
+#crosshair {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.5rem;
+    color: rgba(255,255,255,0.25);
+    text-shadow: 0 0 3px #000;
+}
+#interaction-hint {
+    position: absolute;
+    top: 55%; left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.8rem; color: #e8d88a;
+    text-shadow: 0 0 5px #000;
+}
+#status-effects {
+    position: absolute;
+    top: 60px; right: 20px;
+}
+.status-effect {
+    background: rgba(0,0,0,0.6);
+    border: 1px solid #666;
+    padding: 4px 10px; margin-bottom: 5px;
+    font-size: 0.75rem;
+}
+#flashlight-indicator {
+    position: absolute;
+    bottom: 60px; right: 20px;
+    font-size: 0.9rem;
+    color: #e8d88a;
+    text-shadow: 0 0 10px rgba(255,255,200,0.6);
+    z-index: 15;
+}
+
+/* 弹窗 */
+.modal { background: rgba(0,0,0,0.85); }
+.modal-content {
+    background: #0a0a05;
+    border: 1px solid #6a6a30;
+    padding: 30px;
+    max-width: 700px; width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+.modal-content h2 {
+    text-align: center;
+    color: #c8c860;
+    letter-spacing: 0.4em;
+    margin-bottom: 20px;
+    font-size: 1.3rem;
+}
+
+/* 背包 */
+#inventory-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px; margin-bottom: 15px;
+}
+.inventory-slot {
+    aspect-ratio: 1;
+    background: #1a1a10;
+    border: 1px solid #444;
+    display: flex;
+    align-items: center; justify-content: center;
+    font-size: 1.6rem;
+    cursor: pointer; position: relative;
+    transition: all 0.15s;
+}
+.inventory-slot:hover { border-color: #c8c860; background: #2a2a15; }
+.inventory-slot.selected { border-color: #e8e860; box-shadow: 0 0 8px rgba(200,180,60,0.4); }
+.inventory-slot.empty { color: #333; }
+.inventory-slot .count {
+    position: absolute; bottom: 2px; right: 4px;
+    font-size: 0.65rem;
+}
+#inventory-details {
+    background: #0f0f08;
+    border: 1px solid #333;
+    padding: 12px; min-height: 60px;
+    font-size: 0.85rem; color: #888;
+    margin-bottom: 15px;
+}
+
+/* 作弊面板 */
+.cheat-input-row {
+    display: flex; gap: 10px; margin-bottom: 15px;
+}
+#cheat-level-input {
+    flex: 1;
+    background: #1a1a10;
+    border: 1px solid #444;
+    color: #e8d88a;
+    padding: 8px 15px;
+    font-family: inherit; font-size: 1rem;
+}
+#cheat-level-input:focus {
+    outline: none; border-color: #c8c860;
+}
+#cheat-level-list {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 5px; margin-bottom: 15px;
+    max-height: 50vh; overflow-y: auto;
+}
+.cheat-level-btn {
+    background: #1a1a10;
+    border: 1px solid #333;
+    color: #888;
+    padding: 5px 3px;
+    font-family: inherit; font-size: 0.7rem;
+    cursor: pointer; text-align: center;
+    transition: all 0.15s;
+}
+.cheat-level-btn:hover { border-color: #c8c860; color: #e8d88a; background: #2a2a15; }
+.cheat-level-btn.detailed { border-color: #6a6a30; color: #c8c860; }
+
+/* 死亡画面 */
+#death-screen { background: rgba(80,0,0,0.9); }
+.death-content { text-align: center; padding: 60px; }
+.death-content h1 {
+    font-size: 2.5rem;
+    color: #ff4040;
+    text-shadow: 0 0 30px rgba(255,0,0,0.5);
+    margin-bottom: 10px;
+}
+.death-content p { color: #a06060; margin-bottom: 30px; }
+
+/* 层级切换 */
+#level-transition { background: rgba(0,0,0,0.9); }
+.transition-content { text-align: center; padding: 60px; }
+#transition-level-name {
+    font-size: 2.5rem;
+    color: #e8d88a;
+    text-shadow: 0 0 30px rgba(200,180,60,0.6);
+    margin-bottom: 10px;
+}
+#transition-level-desc { color: #888; font-style: italic; }
+
+/* 滚动条 */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #0a0a05; }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }

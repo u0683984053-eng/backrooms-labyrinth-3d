@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>后室迷宫 3D</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="game-container">
+    <canvas id="game-canvas"></canvas>
+
+    <div id="loading-screen">
+        <div class="loading-content">
+            <h1>后 室 迷 宫</h1>
+            <div class="loading-bar-bg"><div class="loading-bar-fill"></div></div>
+            <p id="loading-text">加载中...</p>
+        </div>
+    </div>
+
+    <div id="start-screen" class="overlay hidden">
+        <div class="start-content">
+            <h1>后 室 迷 宫 3D</h1>
+            <p class="subtitle">如果你不够小心，就会从现实中卡出...</p>
+            <button id="btn-start" class="btn-primary">进 入 后 室</button>
+            <p class="hint">点击开始 | WASD 移动 | 鼠标转视角 | 空格 跳跃</p>
+            <p class="hint">B/I 背包 | C 蹲下 | Q 冲刺 | F 手电筒</p>
+            <p class="hint">提示：Level 0 深处藏着一座可以攀爬的二层夹层</p>
+        </div>
+    </div>
+
+    <div id="hud" class="hidden">
+        <div id="hud-top">
+            <div id="health-bar-container">
+                <div id="health-bar-fill"></div>
+                <span id="health-text">100</span>
+            </div>
+            <div id="stamina-bar-container">
+                <div id="stamina-bar-fill"></div>
+                <span id="stamina-text">100</span>
+            </div>
+        </div>
+        <div id="hud-bottom">
+            <div id="level-indicator">Level 0 - 大厅</div>
+            <div id="sanity-indicator">理智: 100%</div>
+            <div id="position-indicator">X: 0 Z: 0</div>
+        </div>
+        <div id="crosshair">+</div>
+        <div id="interaction-hint" class="hidden">按 E 互动</div>
+        <div id="status-effects"></div>
+        <div id="flashlight-indicator" class="hidden">🔦 开</div>
+    </div>
+
+    <div id="backpack-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>背 包</h2>
+            <div id="inventory-grid"></div>
+            <div id="inventory-details">
+                <p>选择一个物品查看详情</p>
+            </div>
+            <button id="btn-close-backpack" class="btn-primary">关 闭 (B/I)</button>
+        </div>
+    </div>
+
+    <div id="cheat-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>层 级 选 择</h2>
+            <div class="cheat-input-row">
+                <input type="number" id="cheat-level-input" min="0" max="1000" placeholder="0-1000">
+                <button id="btn-cheat-go" class="btn-primary">前 往</button>
+            </div>
+            <div id="cheat-level-list"></div>
+            <button id="btn-close-cheat" class="btn-secondary">关 闭</button>
+        </div>
+    </div>
+
+    <div id="death-screen" class="overlay hidden">
+        <div class="death-content">
+            <h1>你 已 被 吞 噬</h1>
+            <p>后室又夺走了一个灵魂...</p>
+            <button id="btn-respawn" class="btn-primary">重 生</button>
+        </div>
+    </div>
+
+    <div id="level-transition" class="overlay hidden">
+        <div class="transition-content">
+            <h1 id="transition-level-name">Level ???</h1>
+            <p id="transition-level-desc">正在穿越现实...</p>
+        </div>
+    </div>
+</div>
+
+<script type="importmap">
+{
+    "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+}
+</script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
