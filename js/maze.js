@@ -180,37 +180,71 @@ export class MazeGenerator {
                 this.decorations.push({ type: 'pipe', x: x * this.cellSize, z: y * this.cellSize });
     }
 
+    // 后室设定式生成：连排大房间 + 随意隔断墙 + 门洞连接
+    // （Level 0 是"无限延伸、随意分隔的房间"，不是完美迷宫通道）
     _genRooms() {
-        const stack = [];
-        const cx = Math.floor(this.width / 2);
-        const cy = Math.floor(this.height / 2);
-        this.grid[cx][cy].visited = true;
-        stack.push([cx, cy]);
+        const W = this.width, H = this.height;
+        // 全部打通
+        for (let x = 0; x < W; x++)
+            for (let y = 0; y < H; y++) {
+                this.grid[x][y].walls = [false, false, false, false];
+                this.grid[x][y].visited = true;
+            }
+        // 外围墙
+        for (let x = 0; x < W; x++) { this.grid[x][0].walls[0] = true; this.grid[x][H - 1].walls[2] = true; }
+        for (let y = 0; y < H; y++) { this.grid[0][y].walls[3] = true; this.grid[W - 1][y].walls[1] = true; }
 
-        while (stack.length > 0) {
-            const [x, y] = stack[stack.length - 1];
-            const neighbors = this._getUnvisitedNeighbors(x, y);
-            if (neighbors.length === 0) { stack.pop(); continue; }
+        // 4 格大块分区：块间默认有墙，随机开 1~2 个门洞
+        const B = 4;
+        for (let bx = B; bx < W; bx += B) {
+            for (let y = 0; y < H; y++) this.grid[bx][y].walls[3] = true;
+            const gates = 1 + Math.floor(Math.random() * 2);
+            for (let i = 0; i < gates; i++) {
+                const gy = 1 + Math.floor(Math.random() * (H - 2));
+                this.grid[bx][gy].walls[3] = false;
+                if (Math.random() < 0.5 && gy + 1 < H - 1) this.grid[bx][gy + 1].walls[3] = false;
+            }
+        }
+        for (let by = B; by < H; by += B) {
+            for (let x = 0; x < W; x++) this.grid[x][by].walls[0] = true;
+            const gates = 1 + Math.floor(Math.random() * 2);
+            for (let i = 0; i < gates; i++) {
+                const gx = 1 + Math.floor(Math.random() * (W - 2));
+                this.grid[gx][by].walls[0] = false;
+                if (Math.random() < 0.5 && gx + 1 < W - 1) this.grid[gx + 1][by].walls[0] = false;
+            }
+        }
 
-            const [nx, ny, dir] = neighbors[Math.floor(Math.random() * neighbors.length)];
-            this.grid[x][y].walls[dir] = false;
-            this.grid[nx][ny].walls[(dir + 2) % 4] = false;
-            this.grid[nx][ny].visited = true;
-            stack.push([nx, ny]);
-
-            if (Math.random() < 0.25) {
-                const sz = 2 + Math.floor(Math.random() * 2);
-                for (let dx = 0; dx < sz && nx + dx < this.width; dx++) {
-                    for (let dy = 0; dy < sz && ny + dy < this.height; dy++) {
-                        const c = this.grid[nx + dx][ny + dy];
-                        c.walls = [false, false, false, false];
-                        c.visited = true;
+        // 块内随意隔断（1~2 面，留口不封死）
+        for (let bx = 0; bx * B < W; bx++) {
+            for (let by = 0; by * B < H; by++) {
+                const x0 = bx * B, y0 = by * B;
+                const x1 = Math.min(x0 + B, W - 1), y1 = Math.min(y0 + B, H - 1);
+                const segs = 1 + Math.floor(Math.random() * 2);
+                for (let s = 0; s < segs; s++) {
+                    if (Math.random() < 0.5) {
+                        // 垂直隔断（沿 y 方向）
+                        const sx = x0 + 1 + Math.floor(Math.random() * Math.max(1, x1 - x0 - 2));
+                        if (sx < x1) {
+                            const gap = y0 + Math.floor(Math.random() * (y1 - y0));
+                            for (let y = y0; y <= y1; y++) if (y !== gap) this.grid[sx][y].walls[3] = true;
+                        }
+                    } else {
+                        // 水平隔断（沿 x 方向）
+                        const sy = y0 + 1 + Math.floor(Math.random() * Math.max(1, y1 - y0 - 2));
+                        if (sy < y1) {
+                            const gap = x0 + Math.floor(Math.random() * (x1 - x0));
+                            for (let x = x0; x <= x1; x++) if (x !== gap) this.grid[x][sy].walls[0] = true;
+                        }
                     }
                 }
             }
         }
+
+        const cx = Math.floor(W / 2);
+        const cy = Math.floor(H / 2);
         this.startPos.set(cx * this.cellSize, 0, cy * this.cellSize);
-        this.exitPos.set((this.width - 3) * this.cellSize, 0, (this.height - 3) * this.cellSize);
+        this.exitPos.set((W - 3) * this.cellSize, 0, (H - 3) * this.cellSize);
     }
 
     _genCorridors() {
