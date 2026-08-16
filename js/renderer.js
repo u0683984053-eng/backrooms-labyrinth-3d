@@ -686,6 +686,29 @@ export class GameRenderer {
                     grp.add(pole, arm, bulb, halo);
                     grp.position.set(d.x, 0, d.z);
                     single.push(grp);
+                } else if (d.type === 'monolith') {
+                    // Level 999「最后的延伸」：中央圣柱 + 天光
+                    const grp = new THREE.Group();
+                    const stoneMat = new THREE.MeshStandardMaterial({ color: 0x8a8578, roughness: 0.85 });
+                    const pillar = new THREE.Mesh(new THREE.BoxGeometry(4, 9, 4), stoneMat);
+                    pillar.position.y = 4.5;
+                    const cap = new THREE.Mesh(new THREE.BoxGeometry(6, 1.2, 6), stoneMat);
+                    cap.position.y = 9.6;
+                    const base = new THREE.Mesh(new THREE.BoxGeometry(8, 0.8, 8), stoneMat);
+                    base.position.y = 0.4;
+                    // 天光柱
+                    const beam = new THREE.Mesh(
+                        new THREE.CylinderGeometry(2.2, 2.2, 14, 10, 1, true),
+                        new THREE.MeshBasicMaterial({ color: 0xfff6d0, transparent: true, opacity: 0.14, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide })
+                    );
+                    beam.position.y = 10;
+                    const glow = new THREE.Mesh(new THREE.SphereGeometry(3.2, 10, 8), new THREE.MeshBasicMaterial({
+                        color: 0xfff0c0, transparent: true, opacity: 0.2, blending: THREE.AdditiveBlending, depthWrite: false
+                    }));
+                    glow.position.y = 17;
+                    grp.add(pillar, cap, base, beam, glow);
+                    grp.position.set(d.x, 0, d.z);
+                    single.push(grp);
                 } else if (d.type === 'sea_house') {
                     // Level 7「深海恐惧」：海中央的孤房
                     const grp = new THREE.Group();

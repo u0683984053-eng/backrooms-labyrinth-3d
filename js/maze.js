@@ -137,6 +137,13 @@ export class MazeGenerator {
                     z: ey * this.cellSize
                 });
             }
+        } else if (this.config.id === 999) {
+            // Level 999「最后的延伸」：悬浮虚空中的石质大教堂 → 中央圣柱
+            this.decorations.push({
+                type: 'monolith',
+                x: Math.floor(this.width / 2) * this.cellSize,
+                z: Math.floor(this.height / 2) * this.cellSize
+            });
         }
     }
 
@@ -597,16 +604,24 @@ export class MazeGenerator {
     _placeEntities() {
         const entityIds = this.config.entities || [];
         if (entityIds.length === 0) return;
-        const count = 3 + Math.floor(Math.random() * 5) + (this.config.survivalClass || 1);
-        for (let i = 0; i < count; i++) {
+        let count = 3 + Math.floor(Math.random() * 5) + (this.config.survivalClass || 1);
+        // f 版设定：Level 11「无尽城市」白天看不到实体 → 数量减半
+        if (this.config.id === 11) count = Math.max(1, Math.floor(count / 2));
+        const sc = Math.floor(this.startPos.x / this.cellSize);
+        const sz = Math.floor(this.startPos.z / this.cellSize);
+        let placed = 0;
+        for (let t = 0; t < 120 && placed < count; t++) {
             const ex = 2 + Math.floor(Math.random() * (this.width - 4));
             const ey = 2 + Math.floor(Math.random() * (this.height - 4));
+            // 出生安全区：出生点周围 6 格内不刷实体
+            if (Math.abs(ex - sc) < 6 && Math.abs(ey - sz) < 6) continue;
             this.entitySpawns.push({
                 type: entityIds[Math.floor(Math.random() * entityIds.length)],
                 x: ex * this.cellSize,
                 z: ey * this.cellSize,
                 patrolRadius: 5 + Math.random() * 15
             });
+            placed++;
         }
     }
 }

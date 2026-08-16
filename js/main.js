@@ -248,7 +248,7 @@ class BackroomsGame {
             if (!this.player.alive) { this._dead = true; this._onDeath(); }
         }
 
-        // f 版设定：Level 6 光源失效提示计时
+        // f 版设定：Level 404 光源失效提示计时
         if (this.failLightTimer > 0) {
             this.failLightTimer -= dt;
             if (this.failLightTimer <= 0) {
@@ -257,8 +257,31 @@ class BackroomsGame {
             }
         }
 
+        this._updateExitIndicator();
         this._updateHUD();
         this.renderer.render();
+    }
+
+    // 出口方向指示（HUD 箭头指向最近出口）
+    _updateExitIndicator() {
+        const el = document.getElementById('exit-indicator');
+        if (!el || !this.mazeData) return;
+        const exits = (this.mazeData.exits && this.mazeData.exits.length)
+            ? this.mazeData.exits
+            : (this.mazeData.exitPos ? [{ x: this.mazeData.exitPos.x, z: this.mazeData.exitPos.z }] : []);
+        if (exits.length === 0) { el.classList.add('hidden'); return; }
+        let best = null, bd = Infinity;
+        for (const ex of exits) {
+            const d = this.player.position.distanceTo(new THREE.Vector3(ex.x, this.player.position.y, ex.z));
+            if (d < bd) { bd = d; best = ex; }
+        }
+        if (!best || bd < 8) { el.classList.add('hidden'); return; }
+        el.classList.remove('hidden');
+        const dir = new THREE.Vector3(best.x - this.player.position.x, 0, best.z - this.player.position.z);
+        dir.applyQuaternion(this.renderer.camera.quaternion.clone().invert());
+        const ang = Math.atan2(dir.x, -dir.z);
+        el.style.transform = 'translate(-50%,-50%) rotate(' + ang + 'rad)';
+        el.style.opacity = Math.min(1, (bd - 8) / 40).toFixed(2);
     }
 
     // 最近的可拾取补给
