@@ -21,6 +21,28 @@ export class AudioManager {
         this._noise(0.04, 0.06, 80 + Math.random() * 200);
     }
 
+    // 水中脚步（Level 7 深海、Level 37 泳池）
+    playStepWater() {
+        if (!this.enabled) return;
+        const t = this.ctx.currentTime;
+        const o = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        const f = this.ctx.createBiquadFilter();
+        o.type = 'sine';
+        o.frequency.value = 220 + Math.random() * 80;
+        f.type = 'lowpass'; f.frequency.value = 400;
+        g.gain.setValueAtTime(0.07, t);
+        g.gain.linearRampToValueAtTime(0, t + 0.09);
+        o.connect(f); f.connect(g); g.connect(this.master);
+        o.start(); o.stop(t + 0.1);
+    }
+
+    // 雪地脚步（Level 210 雪球）
+    playStepSnow() {
+        if (!this.enabled) return;
+        this._noise(0.05, 0.08, 2600 + Math.random() * 900);
+    }
+
     playEntityNearby() {
         if (!this.enabled) return;
         this._noise(0.08, 0.2, 40 + Math.random() * 80);

@@ -294,9 +294,22 @@ export class GameRenderer {
         this.config = config;
         const flags = config.renderFlags || [];
 
+        // 层级氛围雾色（f 版设定）
+        let fogColor = 0x171410;
+        if (config.id === 2) fogColor = 0x2a1808;        // 管道之梦：闷热
+        else if (config.id === 7) fogColor = 0x08182a;   // 深海：冰冷蓝
+        else if (config.id === 8) fogColor = 0x141210;   // 洞穴
+        else if (config.id === 10) fogColor = 0x1c1408;  // 麦田黄昏
+        else if (config.id === 48) fogColor = 0x0e1a0c;  // 猩红森林
+        else if (config.id === 210) fogColor = 0x1c2228; // 雪境
+        else if (config.id === 399) fogColor = 0x0a0c18; // 霓虹夜
+        else if (config.id >= 900) fogColor = 0x0c0a12;  // 终局虚空
+        this._fogColor = fogColor;
+
         const fogDensity = flags.includes(MazeRenderFlags.FOG_HEAVY) ? 0.0011
             : flags.includes(MazeRenderFlags.NO_FOG) ? 0.00012 : 0.0006;
-        this.scene.fog = new THREE.FogExp2(0x171410, fogDensity);
+        this.scene.fog = new THREE.FogExp2(fogColor, fogDensity);
+        this.scene.background = new THREE.Color(fogColor);
 
         const dark = flags.includes(MazeRenderFlags.DARKNESS);
         this.ambient.intensity = dark ? 0.1 : 1.5;
@@ -643,6 +656,36 @@ export class GameRenderer {
                     grp.position.set(d.x, 0, d.z);
                     grp.rotation.y = d.rot;
                     single.push(grp);
+                } else if (d.type === 'stalactite') {
+                    // Level 8「洞穴」：钟乳石（倒挂锥）
+                    const h = d.h || 1.2;
+                    const rockMat = new THREE.MeshStandardMaterial({ color: 0x6a5a48, roughness: 0.95 });
+                    const sp = new THREE.Mesh(new THREE.ConeGeometry(0.3, h, 7), rockMat);
+                    sp.position.y = WALL_H - h / 2;
+                    const sp2 = new THREE.Mesh(new THREE.ConeGeometry(0.16, h * 0.6, 6), rockMat);
+                    sp2.position.set(0.35, WALL_H - h * 0.3, 0.2);
+                    const grp = new THREE.Group();
+                    grp.add(sp, sp2);
+                    grp.position.set(d.x, 0, d.z);
+                    single.push(grp);
+                } else if (d.type === 'streetlamp') {
+                    // Level 9 / 94：郊区路灯
+                    const grp = new THREE.Group();
+                    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.1, 4.6, 7), this.metalMat);
+                    pole.position.y = 2.3;
+                    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.08, 0.08), this.metalMat);
+                    arm.position.set(0.45, 4.4, 0);
+                    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), new THREE.MeshBasicMaterial({
+                        color: 0xffe8a0, transparent: true, opacity: 0.95
+                    }));
+                    bulb.position.set(0.88, 4.3, 0);
+                    const halo = new THREE.Mesh(new THREE.SphereGeometry(0.55, 8, 6), new THREE.MeshBasicMaterial({
+                        color: 0xffd880, transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending, depthWrite: false
+                    }));
+                    halo.position.set(0.88, 4.25, 0);
+                    grp.add(pole, arm, bulb, halo);
+                    grp.position.set(d.x, 0, d.z);
+                    single.push(grp);
                 } else if (d.type === 'sea_house') {
                     // Level 7「深海恐惧」：海中央的孤房
                     const grp = new THREE.Group();
@@ -705,6 +748,28 @@ export class GameRenderer {
                 const ms = neonMs.filter((_, i) => i % neonColors.length === c);
                 this._instanced(unitBox, neonMat[c], ms, this.decoGroup, false, false);
             }
+            // 下雨：斜落雨线粒子（399 设定：无尽湿漉街道）
+            if (!this.rainPoints) {
+                const N = 500;
+                const pos = new Float32Array(N * 3);
+                for (let i = 0; i < N; i++) {
+                    pos[i * 3] = (Math.random() - 0.5) * 160;
+                    pos[i * 3 + 1] = Math.random() * 8;
+                    pos[i * 3 + 2] = (Math.random() - 0.5) * 160;
+                }
+                const geo = new THREE.BufferGeometry();
+                geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+                this.rainPoints = new THREE.Points(geo, new THREE.PointsMaterial({
+                    color: 0x8899cc, size: 0.05, transparent: true, opacity: 0.5,
+                    depthWrite: false, sizeAttenuation: true
+                }));
+                this.rainPoints.frustumCulled = false;
+                this.scene.add(this.rainPoints);
+            }
+            this.rainPoints.visible = true;
+            this._rainT = 0;
+        } else if (this.rainPoints) {
+            this.rainPoints.visible = false;
         }
         // Level 37 泳池房：瓷砖水面地板
         if (this.config && this.config.id === 37) {
@@ -915,5 +980,19 @@ export class GameRenderer {
     addEntityMesh(m) { this.entityGroup.add(m); }
     removeEntityMesh(m) { this.entityGroup.remove(m); }
 
-    render() { this.renderer.render(this.scene, this.camera); }
+    render() {
+        // 399 下雨动画
+        if (this.rainPoints && this.rainPoints.visible) {
+            this._rainT = (this._rainT || 0) + 1;
+            const pos = this.rainPoints.geometry.attributes.position;
+            const dy = 0.3;
+            for (let i = 0; i < pos.count; i++) {
+                let y = pos.getY(i) - dy;
+                if (y < 0) y = 8 + Math.random() * 2;
+                pos.setY(i, y);
+            }
+            pos.needsUpdate = true;
+        }
+        this.renderer.render(this.scene, this.camera);
+    }
 }

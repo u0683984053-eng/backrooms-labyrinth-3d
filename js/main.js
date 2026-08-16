@@ -139,6 +139,11 @@ class BackroomsGame {
         this.player.sanity = Math.max(30, this.player.sanity);
         this.currentDark = flags.includes(MazeRenderFlags.DARKNESS);
         this.failLightTimer = 0;
+        this.currentTerrain = config.terrainType;
+
+        // Level 404：故障效果（f 版设定：损坏的现实）
+        const gl = document.getElementById('glitch-overlay');
+        if (gl) gl.classList.toggle('hidden', id !== 404);
 
         this.entityManager.spawnEntities(this.mazeData.entitySpawns);
         this.audio.stopAmbient();
@@ -229,7 +234,13 @@ class BackroomsGame {
             if ((Math.abs(iv.forward) > 0.01 || Math.abs(iv.right) > 0.01)) {
                 this.stepTimer += dt;
                 const interval = this.player.isCrouching ? 0.6 : this.player.stamina > 0 && this.input.isSprinting() ? 0.25 : 0.45;
-                if (this.stepTimer >= interval) { this.stepTimer = 0; this.audio.playStep(); }
+                if (this.stepTimer >= interval) {
+                    this.stepTimer = 0;
+                    // 材质脚步声（f 版设定：潮湿地毯/水/雪）
+                    if (this.currentTerrain === 'aquatic') this.audio.playStepWater();
+                    else if (this.currentTerrain === 'snow') this.audio.playStepSnow();
+                    else this.audio.playStep();
+                }
             }
             const nearby = this.entityManager.getEntitiesInRange(this.player.position, 12);
             if (nearby.length > 0 && Math.random() < 0.03) this.audio.playEntityNearby();

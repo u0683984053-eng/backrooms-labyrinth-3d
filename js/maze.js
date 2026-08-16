@@ -1,4 +1,4 @@
-﻿import * as THREE from 'three';
+import * as THREE from 'three';
 import { TerrainType, MazeRenderFlags } from './config.js';
 
 const WALL_HEIGHT = 3.5;
@@ -113,6 +113,30 @@ export class MazeGenerator {
                 z: Math.floor(this.height / 2) * this.cellSize,
                 rot: Math.floor(Math.random() * 4) * (Math.PI / 2)
             });
+        } else if (this.config.id === 8) {
+            // Level 8「洞穴系统」：钟乳石
+            for (let i = 0; i < 26; i++) {
+                const ex = 2 + Math.floor(Math.random() * (this.width - 4));
+                const ey = 2 + Math.floor(Math.random() * (this.height - 4));
+                if (this._cellBlocked(ex, ey, 0)) continue;
+                this.decorations.push({
+                    type: 'stalactite',
+                    x: ex * this.cellSize + (Math.random() - 0.5) * 3,
+                    z: ey * this.cellSize + (Math.random() - 0.5) * 3,
+                    h: 0.8 + Math.random() * 1.6
+                });
+            }
+        } else if (this.config.id === 9 || this.config.id === 94) {
+            // Level 9 / 94：郊区路灯
+            for (let i = 0; i < 18; i++) {
+                const ex = 1 + Math.floor(Math.random() * (this.width - 2));
+                const ey = 1 + Math.floor(Math.random() * (this.height - 2));
+                this.decorations.push({
+                    type: 'streetlamp',
+                    x: ex * this.cellSize,
+                    z: ey * this.cellSize
+                });
+            }
         }
     }
 
