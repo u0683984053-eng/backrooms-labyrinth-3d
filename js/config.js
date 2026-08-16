@@ -138,6 +138,11 @@ export const LEVEL_CONFIGS = {
         [MazeRenderFlags.FOG_HEAVY],
         ['smiler', 'hound', 'clump']),
 
+    18: def(18, '便利店', '无尽延伸的 24 小时便利店。货架上的食物看起来永远新鲜——永远不要吃。',
+        TerrainType.COMPLEX, SurvivalClass.ONE, Environment.INDOOR_ARTIFICIAL,
+        [MazeRenderFlags.FLICKERING_LIGHTS],
+        ['smiler', 'duller', 'clump']),
+
     27: def(27, '木屋', '无限相连的木制房间，让人想起桑拿房。高温和迷失感。',
         TerrainType.ROOMS, SurvivalClass.ONE, Environment.INDOOR_ARTIFICIAL,
         [MazeRenderFlags.NO_CEILING],

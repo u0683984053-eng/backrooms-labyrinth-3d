@@ -142,6 +142,21 @@ export class MazeGenerator {
                     h: 0.8 + Math.random() * 1.6
                 });
             }
+        } else if (this.config.id === 18) {
+            // Level 18「便利店」：冰柜 + 收银台
+            let placed = 0;
+            for (let t2 = 0; t2 < 60 && placed < 10; t2++) {
+                const ex = 2 + Math.floor(Math.random() * (this.width - 4));
+                const ey = 2 + Math.floor(Math.random() * (this.height - 4));
+                if (this._cellBlocked(ex, ey, 0)) continue;
+                this.decorations.push({
+                    type: Math.random() < 0.6 ? 'freezer' : 'register',
+                    x: ex * this.cellSize + (Math.random() - 0.5) * 2,
+                    z: ey * this.cellSize + (Math.random() - 0.5) * 2,
+                    rot: Math.floor(Math.random() * 4) * (Math.PI / 2)
+                });
+                placed++;
+            }
         } else if (this.config.id === 33) {
             // Level 33「电梯」：金属电梯门（每 2 格一个）
             for (let x = 2; x < this.width - 2; x += 2) {

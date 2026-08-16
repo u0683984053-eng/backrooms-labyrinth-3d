@@ -621,6 +621,7 @@ export class GameRenderer {
             const shelfMat = new THREE.MeshStandardMaterial({ color: 0x6a5a3a, roughness: 0.85 });
             const itemMat = new THREE.MeshStandardMaterial({ color: 0x7a6a4a, roughness: 0.9 });
             const pMs = [], pipeMs = [], shelfMs = [], itemMs = [];
+            const elevDoorMs = [], elevSeamMs = [], elevSignMs = [];
             const single = []; // 独立网格的家具（数量少，直接 add）
             for (const d of decorations) {
                 if (d.type === 'pillar') {
@@ -830,20 +831,46 @@ export class GameRenderer {
                     grp.position.set(d.x, 0, d.z);
                     single.push(grp);
                 } else if (d.type === 'elevator') {
-                    // Level 33「电梯」：金属电梯门 + 楼层指示
+                    // Level 33「电梯」：金属电梯门（收集矩阵 → InstancedMesh）
+                    const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, d.rot, 0));
+                    for (const off of [new THREE.Vector3(-0.45, 1.2, 0).applyQuaternion(q), new THREE.Vector3(0.45, 1.2, 0).applyQuaternion(q)]) {
+                        elevDoorMs.push(mat(d.x + off.x, off.y, d.z + off.z, _qId, 0.9, 2.4, 0.08));
+                    }
+                    const offS = new THREE.Vector3(0, 1.2, 0).applyQuaternion(q);
+                    elevSeamMs.push(mat(d.x + offS.x, offS.y, d.z + offS.z, _qId, 0.03, 2.3, 0.1));
+                    const offL = new THREE.Vector3(0, 2.62, 0).applyQuaternion(q);
+                    elevSignMs.push(mat(d.x + offL.x, offL.y, d.z + offL.z, _qId, 0.5, 0.22, 1));
+                } else if (d.type === 'freezer') {
+                    // Level 18 便利店：冰柜（透明门 + 冷光）
                     const grp = new THREE.Group();
-                    const doorMat = new THREE.MeshStandardMaterial({ color: 0x8a8a90, roughness: 0.45, metalness: 0.7 });
-                    const l = new THREE.Mesh(new THREE.BoxGeometry(0.9, 2.4, 0.08), doorMat);
-                    l.position.set(-0.45, 1.2, 0);
-                    const r = l.clone(); r.position.x = 0.45;
-                    const seam = new THREE.Mesh(new THREE.BoxGeometry(0.03, 2.3, 0.1), new THREE.MeshStandardMaterial({ color: 0x2a2a2e, roughness: 0.4, metalness: 0.6 }));
-                    seam.position.set(0, 1.2, 0);
-                    // 楼层数字灯
-                    const sign = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.22), new THREE.MeshBasicMaterial({
-                        color: 0xffe8a0, transparent: true, opacity: 0.9
+                    const body = new THREE.Mesh(new THREE.BoxGeometry(1.8, 2.0, 0.7), this.metalMat);
+                    body.position.y = 1.0;
+                    const door = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.7, 0.04), new THREE.MeshStandardMaterial({
+                        color: 0xbfe8ff, roughness: 0.1, metalness: 0.1, transparent: true, opacity: 0.55
                     }));
-                    sign.position.set(0, 2.62, 0);
-                    grp.add(l, r, seam, sign);
+                    door.position.set(0, 1.15, 0.36);
+                    const glow = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.6), new THREE.MeshBasicMaterial({
+                        color: 0x99ddff, transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending, depthWrite: false
+                    }));
+                    glow.position.set(0, 1.15, 0.37);
+                    grp.add(body, door, glow);
+                    grp.position.set(d.x, 0, d.z);
+                    grp.rotation.y = d.rot;
+                    single.push(grp);
+                } else if (d.type === 'register') {
+                    // Level 18 便利店：收银台
+                    const grp = new THREE.Group();
+                    const counter = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.0, 0.8), this.woodMat);
+                    counter.position.y = 0.5;
+                    const top = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.06, 0.8), this.woodDarkMat);
+                    top.position.y = 1.03;
+                    const screen = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.35, 0.05), new THREE.MeshStandardMaterial({ color: 0x1a1a1e, roughness: 0.4 }));
+                    screen.position.set(0.4, 1.3, 0.2);
+                    const scrGlow = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.28), new THREE.MeshBasicMaterial({
+                        color: 0x88ff88, transparent: true, opacity: 0.6
+                    }));
+                    scrGlow.position.set(0.4, 1.3, 0.226);
+                    grp.add(counter, top, screen, scrGlow);
                     grp.position.set(d.x, 0, d.z);
                     grp.rotation.y = d.rot;
                     single.push(grp);
@@ -943,6 +970,10 @@ export class GameRenderer {
             this._instanced(unitPipe, pipeMat, pipeMs, this.decoGroup, true, false);
             this._instanced(unitBox, shelfMat, shelfMs, this.decoGroup, true, false);
             this._instanced(unitBox, itemMat, itemMs, this.decoGroup, false, false);
+            // 电梯门（InstancedMesh）
+            this._instanced(unitBox, new THREE.MeshStandardMaterial({ color: 0x8a8a90, roughness: 0.45, metalness: 0.7 }), elevDoorMs, this.decoGroup, true, false);
+            this._instanced(unitBox, new THREE.MeshStandardMaterial({ color: 0x2a2a2e, roughness: 0.4, metalness: 0.6 }), elevSeamMs, this.decoGroup, true, false);
+            this._instanced(unitPlane, new THREE.MeshBasicMaterial({ color: 0xffe8a0, transparent: true, opacity: 0.9 }), elevSignMs, this.decoGroup, false, false);
             for (const o of single) {
                 o.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
                 this.decoGroup.add(o);
