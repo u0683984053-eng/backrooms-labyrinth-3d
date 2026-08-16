@@ -26,10 +26,16 @@
             <p class="hint">点击开始 | WASD 移动 | 鼠标转视角 | 空格 跳跃</p>
             <p class="hint">B/I 背包 | C 蹲下 | Q 冲刺 | F 手电筒 | E 卡出（noclip）</p>
             <p class="hint">提示：Level 0 深处藏着一座可以攀爬的二层夹层，夹层上还有隐藏出口</p>
+            <p class="hint" id="doc-count"></p>
             <div class="sens-row">
                 <span class="sens-label">鼠标灵敏度</span>
                 <input type="range" id="sens-input" min="2" max="12" value="7" step="1">
                 <span id="sens-value">7</span>
+            </div>
+            <div class="sens-row">
+                <span class="sens-label">音量</span>
+                <input type="range" id="vol-input" min="0" max="100" value="70" step="5">
+                <span id="vol-value">70</span>
             </div>
         </div>
     </div>
@@ -85,7 +91,7 @@
     <div id="death-screen" class="overlay hidden">
         <div class="death-content">
             <h1>你 已 被 吞 噬</h1>
-            <p>后室又夺走了一个灵魂...</p>
+            <p id="death-cause">后室又夺走了一个灵魂...</p>
             <button id="btn-respawn" class="btn-primary">重 生</button>
         </div>
     </div>

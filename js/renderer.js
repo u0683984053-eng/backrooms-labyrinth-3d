@@ -1027,6 +1027,34 @@ export class GameRenderer {
                     grp.position.set(d.x, 0, d.z);
                     grp.rotation.y = d.rot;
                     single.push(grp);
+                } else if (d.type === 'errsign') {
+                    // Level 404：故障"404"发光标识
+                    const grp = new THREE.Group();
+                    const panel = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.9, 0.08), new THREE.MeshStandardMaterial({
+                        color: 0x1a1a1e, roughness: 0.5
+                    }));
+                    panel.position.y = 1.9;
+                    // "404" 发光纹理
+                    if (!this._errTex) {
+                        const c = makeCanvas(128, 64);
+                        const g = c.getContext('2d');
+                        g.fillStyle = '#101014';
+                        g.fillRect(0, 0, 128, 64);
+                        g.fillStyle = '#ff3030';
+                        g.font = 'bold 44px monospace';
+                        g.textAlign = 'center';
+                        g.textBaseline = 'middle';
+                        g.fillText('404', 64, 34);
+                        this._errTex = finishTexture(new THREE.CanvasTexture(c));
+                    }
+                    const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.7), new THREE.MeshBasicMaterial({
+                        map: this._errTex, transparent: true, opacity: 0.9
+                    }));
+                    sign.position.set(0, 1.9, 0.05);
+                    grp.add(panel, sign);
+                    grp.position.set(d.x, 0, d.z);
+                    grp.rotation.y = d.rot;
+                    single.push(grp);
                 } else if (d.type === 'blackboard') {
                     // Level 52「学校」：教室黑板
                     const grp = new THREE.Group();

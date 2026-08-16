@@ -29,6 +29,7 @@ class BackroomsGame {
         this._dead = false;
         this.stepTimer = 0;
         this.noclipHeld = 0;
+        this.playTime = 0;
 
         this._setupUI();
         this._initAudio();
@@ -52,6 +53,7 @@ class BackroomsGame {
                 document.getElementById('start-screen').classList.remove('hidden');
                 const btn = document.getElementById('btn-start');
                 if (btn && this.hasSave()) btn.textContent = '继 续 探 索';
+                this._updateDocCount();
             }
             bar.style.width = p + '%';
             txt.textContent = '加载中... ' + Math.floor(p) + '%';
@@ -82,6 +84,24 @@ class BackroomsGame {
                 sensVal.textContent = v;
                 this.input.sensitivity = v / 7 * 0.002;
                 try { localStorage.setItem('backrooms3d_sens', String(v)); } catch (e) {}
+            });
+        }
+
+        // 音量设置（localStorage 记忆）
+        const vol = document.getElementById('vol-input');
+        const volVal = document.getElementById('vol-value');
+        if (vol && volVal) {
+            try {
+                const saved = parseInt(localStorage.getItem('backrooms3d_vol') || '70', 10);
+                vol.value = saved;
+                volVal.textContent = saved;
+                if (this.audio.master) this.audio.master.gain.value = saved / 100 * 0.4;
+            } catch (e) {}
+            vol.addEventListener('input', () => {
+                const v = parseInt(vol.value, 10);
+                volVal.textContent = v;
+                if (this.audio.master) this.audio.master.gain.value = v / 100 * 0.4;
+                try { localStorage.setItem('backrooms3d_vol', String(v)); } catch (e) {}
             });
         }
     }
@@ -294,6 +314,7 @@ class BackroomsGame {
 
         const uiOpen = this.backpackOpen || this.cheatOpen;
         if (!uiOpen && !this._dead) {
+            this.playTime += dt;
             this.player.update(dt, this.input, this.mazeData ? this.mazeData.grid : null, 5, this.mazeData ? this.mazeData.platforms : null);
             this.renderer.updateLights(this.flickerTime);
             this.renderer.updateFlashlight(this.player, this.flickerTime);
@@ -513,7 +534,7 @@ class BackroomsGame {
         }
     }
 
-    // M.E.G. 文档展示
+    // M.E.G. 文档展示（收集计数）
     _showMegDoc(text) {
         const ov = document.getElementById('meg-doc-overlay');
         if (!ov) return;
@@ -522,6 +543,20 @@ class BackroomsGame {
         this.audio.playCollect();
         clearTimeout(this._docTimer);
         this._docTimer = setTimeout(() => ov.classList.add('hidden'), 4200);
+        try {
+            const n = parseInt(localStorage.getItem('backrooms3d_docs') || '0', 10);
+            localStorage.setItem('backrooms3d_docs', String(n + 1));
+            this._updateDocCount();
+        } catch (e) {}
+    }
+
+    _updateDocCount() {
+        const el = document.getElementById('doc-count');
+        if (!el) return;
+        try {
+            const n = parseInt(localStorage.getItem('backrooms3d_docs') || '0', 10);
+            el.textContent = '已收集 M.E.G. 文档：' + n + ' 份';
+        } catch (e) {}
     }
 
     // 卡出（noclip）：随机传送到邻近层级（f 版设定：Level 0 主要出口方式）
@@ -534,6 +569,11 @@ class BackroomsGame {
         this.audio.playTransition();
         document.getElementById('hud').classList.add('hidden');
         document.getElementById('ending-screen').classList.remove('hidden');
+        // 显示通关用时
+        const mins = Math.floor(this.playTime / 60);
+        const secs = Math.floor(this.playTime % 60);
+        const sub = document.querySelector('.ending-sub');
+        if (sub) sub.textContent = '你在后室中挣扎了 ' + mins + ' 分 ' + secs + ' 秒。寂静。仅此而已。你自由了。';
     }
 
     _restartGame() {
@@ -583,6 +623,8 @@ class BackroomsGame {
     _onDeath() {
         document.getElementById('hud').classList.add('hidden');
         document.getElementById('death-screen').classList.remove('hidden');
+        const d = document.getElementById('death-cause');
+        if (d) d.textContent = this.player.lastAttacker ? '你被 ' + this.player.lastAttacker + ' 吞噬...' : '后室又夺走了一个灵魂...';
         this.input.releaseLock();
         this.audio.stopAmbient();
     }

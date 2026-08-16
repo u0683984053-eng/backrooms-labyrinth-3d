@@ -30,6 +30,7 @@ export class Player {
         this.platforms = [];
         // 理智流失速率（黑暗层级更高，f 版设定：心理危害）
         this.sanityDrain = 0.3;
+        this.lastAttacker = null;
     }
 
     update(dt, input, grid, cellSize, platforms) {
@@ -226,5 +227,6 @@ export class Player {
         this.sanity = 100; this.alive = true; this.statusEffects = [];
         this.height = PLAYER_H;
         this.vy = 0; this.onGround = true;
+        this.lastAttacker = null;
     }
 }

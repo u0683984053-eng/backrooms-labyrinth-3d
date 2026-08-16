@@ -210,6 +210,18 @@ export class MazeGenerator {
                 this.decorations.push({ type: 'ballpit', x: ex * this.cellSize, z: ey * this.cellSize });
                 placed++;
             }
+        } else if (this.config.id === 404) {
+            // Level 404：故障"404"标识牌
+            for (let i = 0; i < 3; i++) {
+                const ex = 2 + Math.floor(Math.random() * (this.width - 4));
+                const ey = 2 + Math.floor(Math.random() * (this.height - 4));
+                this.decorations.push({
+                    type: 'errsign',
+                    x: ex * this.cellSize,
+                    z: ey * this.cellSize,
+                    rot: Math.floor(Math.random() * 4) * (Math.PI / 2)
+                });
+            }
         } else if (this.config.id === 33) {
             // Level 33「电梯」：金属电梯门（每 2 格一个）
             for (let x = 2; x < this.width - 2; x += 2) {
