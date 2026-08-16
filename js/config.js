@@ -125,7 +125,7 @@ export const LEVEL_CONFIGS = {
 
     11: def(11, '无尽城市', '一座看似无限的现代城市，摩天大楼、街道和基础设施一应俱全。白天看不到实体。',
         TerrainType.URBAN, SurvivalClass.ONE, Environment.OUTDOOR_TERRESTRIAL,
-        [MazeRenderFlags.OPEN_BORDER, MazeRenderFlags.DOUBLE_SIDED],
+        [MazeRenderFlags.OPEN_BORDER, MazeRenderFlags.DOUBLE_SIDED, MazeRenderFlags.NO_CEILING],
         ['smiler', 'hound', 'skin_stealer', 'clump', 'burster']),
 
     12: def(12, '矩阵', '纯白色的空间，只有一个明亮的光源。令人迷失方向，导致理智快速下降。',
@@ -142,6 +142,11 @@ export const LEVEL_CONFIGS = {
         TerrainType.ROOMS, SurvivalClass.ONE, Environment.INDOOR_ARTIFICIAL,
         [MazeRenderFlags.NO_CEILING],
         ['smiler', 'hound']),
+
+    33: def(33, '电梯', '无尽狭窄的电梯井，金属门通往任意楼层。有些楼层最好别按。',
+        TerrainType.CORRIDORS, SurvivalClass.ONE, Environment.INDOOR_ARTIFICIAL,
+        [MazeRenderFlags.FLICKERING_LIGHTS],
+        ['smiler', 'duller', 'clump']),
 
     28: def(28, '风暴石堡', '悬浮空岛上的一座中世纪城堡，永远笼罩在雷暴之中。',
         TerrainType.OPEN, SurvivalClass.TWO, Environment.OUTDOOR_AERIAL,

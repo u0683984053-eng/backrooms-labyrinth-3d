@@ -107,6 +107,117 @@ export class AudioManager {
 
         this.ambient = { osc: o, gain: g, filter: f, hum, humG };
         this._modAmbient();
+        this._startLevelAmbient(levelId);
+    }
+
+    // ---- f 版设定：层级专属音景 ----
+    _startLevelAmbient(levelId) {
+        this.levelSounds = this.levelSounds || [];
+        // 清理旧的层级音
+        for (const s of this.levelSounds) {
+            try { s.stop(); } catch (e) {}
+            clearInterval(s.iv);
+        }
+        this.levelSounds = [];
+        if (!this.enabled) return;
+        const mk = () => {
+            const o = this.ctx.createOscillator();
+            const g = this.ctx.createGain();
+            const f = this.ctx.createBiquadFilter();
+            o.connect(f); f.connect(g); g.connect(this.master);
+            o.start();
+            return { o, g, f };
+        };
+        const t = () => this.ctx.currentTime;
+
+        if (levelId === 5) {
+            // 恐怖酒店：走调的留声机圆舞曲
+            const notes = [392, 330, 294, 330, 392, 330, 294, 262];
+            const iv = setInterval(() => {
+                if (!this.enabled) return;
+                for (let i = 0; i < notes.length; i++) {
+                    const s = mk();
+                    s.o.type = 'triangle';
+                    s.o.frequency.value = notes[i] * (1 + (Math.random() - 0.5) * 0.03);
+                    s.f.type = 'lowpass'; s.f.frequency.value = 900;
+                    s.g.gain.setValueAtTime(0.028, t() + i * 0.42);
+                    s.g.gain.exponentialRampToValueAtTime(0.001, t() + i * 0.42 + 0.4);
+                    s.o.stop(t() + i * 0.42 + 0.45);
+                    this.levelSounds.push(s);
+                }
+            }, 7200);
+            this.levelSounds.push({ stop: () => clearInterval(iv), iv });
+        } else if (levelId === 52) {
+            // 学校：远处上课铃声
+            const iv = setInterval(() => {
+                if (!this.enabled) return;
+                for (let i = 0; i < 3; i++) {
+                    const s = mk();
+                    s.o.type = 'sine';
+                    s.o.frequency.value = 1240;
+                    s.g.gain.setValueAtTime(0.02, t() + i * 0.9);
+                    s.g.gain.exponentialRampToValueAtTime(0.001, t() + i * 0.9 + 0.8);
+                    s.o.stop(t() + i * 0.9 + 0.85);
+                    this.levelSounds.push(s);
+                }
+            }, 24000);
+            this.levelSounds.push({ stop: () => clearInterval(iv), iv });
+        } else if (levelId === 100) {
+            // 工厂：远处机械轰鸣
+            const s = mk();
+            s.o.type = 'sawtooth';
+            s.o.frequency.value = 55;
+            s.f.type = 'lowpass'; s.f.frequency.value = 120;
+            s.g.gain.value = 0.022;
+            this.levelSounds.push(s);
+            const iv = setInterval(() => {
+                if (!this.enabled) return;
+                const p = mk();
+                p.o.type = 'square';
+                p.o.frequency.value = 80;
+                p.f.type = 'lowpass'; p.f.frequency.value = 200;
+                p.g.gain.setValueAtTime(0.03, t());
+                p.g.gain.exponentialRampToValueAtTime(0.001, t() + 0.25);
+                p.o.stop(t() + 0.3);
+                this.levelSounds.push(p);
+            }, 2600);
+            this.levelSounds.push({ stop: () => clearInterval(iv), iv });
+        } else if (levelId === 7) {
+            // 深海：水压声 + 低鸣
+            const s = mk();
+            s.o.type = 'sine';
+            s.o.frequency.value = 38;
+            s.f.type = 'lowpass'; s.f.frequency.value = 80;
+            s.g.gain.value = 0.05;
+            this.levelSounds.push(s);
+            const iv = setInterval(() => {
+                if (!this.enabled) return;
+                const w = mk();
+                w.o.type = 'sine';
+                w.o.frequency.setValueAtTime(60, t());
+                w.o.frequency.linearRampToValueAtTime(45, t() + 2);
+                w.f.type = 'lowpass'; w.f.frequency.value = 200;
+                w.g.gain.setValueAtTime(0.02, t());
+                w.g.gain.exponentialRampToValueAtTime(0.001, t() + 2.2);
+                w.o.stop(t() + 2.3);
+                this.levelSounds.push(w);
+            }, 5200);
+            this.levelSounds.push({ stop: () => clearInterval(iv), iv });
+        } else if (levelId === 399) {
+            // 霓虹城：雨声（持续白噪）+ 电流
+            const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * 2, this.ctx.sampleRate);
+            const data = buf.getChannelData(0);
+            for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * 0.5;
+            const src = this.ctx.createBufferSource();
+            src.buffer = buf; src.loop = true;
+            const rainG = this.ctx.createGain();
+            const rainF = this.ctx.createBiquadFilter();
+            rainF.type = 'lowpass'; rainF.frequency.value = 700;
+            rainG.gain.value = 0.03;
+            src.connect(rainF); rainF.connect(rainG); rainG.connect(this.master);
+            src.start();
+            this.levelSounds.push(src);
+        }
     }
 
     _modAmbient() {
@@ -125,6 +236,14 @@ export class AudioManager {
         if (this.ambient) {
             try { this.ambient.osc.stop(); this.ambient.hum.stop(); } catch (e) {}
             this.ambient = null;
+        }
+        // 清理层级音景
+        if (this.levelSounds) {
+            for (const s of this.levelSounds) {
+                try { s.stop(); } catch (e) {}
+                if (s.iv) clearInterval(s.iv);
+            }
+            this.levelSounds = [];
         }
     }
 

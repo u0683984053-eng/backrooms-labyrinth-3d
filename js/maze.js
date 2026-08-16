@@ -142,6 +142,18 @@ export class MazeGenerator {
                     h: 0.8 + Math.random() * 1.6
                 });
             }
+        } else if (this.config.id === 33) {
+            // Level 33「电梯」：金属电梯门（每 2 格一个）
+            for (let x = 2; x < this.width - 2; x += 2) {
+                for (let y = 2; y < this.height - 2; y += 2) {
+                    this.decorations.push({
+                        type: 'elevator',
+                        x: x * this.cellSize,
+                        z: y * this.cellSize,
+                        rot: Math.floor(Math.random() * 4) * (Math.PI / 2)
+                    });
+                }
+            }
         } else if (this.config.id === 52) {
             // Level 52「学校」：教室黑板
             for (let i = 0; i < 6; i++) {
@@ -164,6 +176,17 @@ export class MazeGenerator {
                     x: ex * this.cellSize + (Math.random() - 0.5) * 2,
                     z: ey * this.cellSize + (Math.random() - 0.5) * 2,
                     rot: Math.floor(Math.random() * 4) * (Math.PI / 2)
+                });
+            }
+        } else if (this.config.id === 11) {
+            // Level 11「无尽城市」：街道路灯（夜晚亮起）
+            for (let i = 0; i < 16; i++) {
+                const ex = 1 + Math.floor(Math.random() * (this.width - 2));
+                const ey = 1 + Math.floor(Math.random() * (this.height - 2));
+                this.decorations.push({
+                    type: 'streetlamp',
+                    x: ex * this.cellSize,
+                    z: ey * this.cellSize
                 });
             }
         } else if (this.config.id === 9 || this.config.id === 94) {

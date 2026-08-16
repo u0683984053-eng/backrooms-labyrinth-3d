@@ -829,6 +829,24 @@ export class GameRenderer {
                     grp.add(pole, arm, bulb, halo);
                     grp.position.set(d.x, 0, d.z);
                     single.push(grp);
+                } else if (d.type === 'elevator') {
+                    // Level 33「电梯」：金属电梯门 + 楼层指示
+                    const grp = new THREE.Group();
+                    const doorMat = new THREE.MeshStandardMaterial({ color: 0x8a8a90, roughness: 0.45, metalness: 0.7 });
+                    const l = new THREE.Mesh(new THREE.BoxGeometry(0.9, 2.4, 0.08), doorMat);
+                    l.position.set(-0.45, 1.2, 0);
+                    const r = l.clone(); r.position.x = 0.45;
+                    const seam = new THREE.Mesh(new THREE.BoxGeometry(0.03, 2.3, 0.1), new THREE.MeshStandardMaterial({ color: 0x2a2a2e, roughness: 0.4, metalness: 0.6 }));
+                    seam.position.set(0, 1.2, 0);
+                    // 楼层数字灯
+                    const sign = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.22), new THREE.MeshBasicMaterial({
+                        color: 0xffe8a0, transparent: true, opacity: 0.9
+                    }));
+                    sign.position.set(0, 2.62, 0);
+                    grp.add(l, r, seam, sign);
+                    grp.position.set(d.x, 0, d.z);
+                    grp.rotation.y = d.rot;
+                    single.push(grp);
                 } else if (d.type === 'blackboard') {
                     // Level 52「学校」：教室黑板
                     const grp = new THREE.Group();
@@ -1086,6 +1104,28 @@ export class GameRenderer {
             case 'desert': return this._desertMat || (this._desertMat = new THREE.MeshStandardMaterial({ color: 0xc8b060, roughness: 0.95 }));
             case 'void': return this._voidMat || (this._voidMat = new THREE.MeshStandardMaterial({ color: 0x181818, roughness: 0.5, metalness: 0.3 }));
             default: return this.floorMat;
+        }
+    }
+
+    // f 版设定：Level 11 城市昼夜切换
+    setDayNight(night) {
+        if (!this._outdoor || (this.config && this.config.id !== 11)) {
+            this._nightOverride = false;
+            return;
+        }
+        this._nightOverride = night;
+        if (night) {
+            this.ambient.intensity = 0.55;
+            this.hemi.intensity = 0.3;
+            this.renderer.toneMappingExposure = 1.15;
+            this.scene.fog = new THREE.FogExp2(0x0a0e1c, this.scene.fog ? this.scene.fog.density : 0.0006);
+            this.scene.background = new THREE.Color(0x0a0e1c);
+        } else {
+            this.ambient.intensity = 2.0;
+            this.hemi.intensity = 1.0;
+            this.renderer.toneMappingExposure = 1.45;
+            this.scene.fog = new THREE.FogExp2(0x171410, 0.0006);
+            this.scene.background = new THREE.Color(0x171410);
         }
     }
 

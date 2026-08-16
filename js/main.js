@@ -167,6 +167,11 @@ class BackroomsGame {
         this.currentDark = flags.includes(MazeRenderFlags.DARKNESS);
         this.failLightTimer = 0;
         this.currentTerrain = config.terrainType;
+        // f 版设定：Level 11 城市昼夜循环（白天无实体）
+        this.dayNightTimer = 0;
+        this._isNight = false;
+        this.renderer.setDayNight(false);
+        this.entityManager.setNight(false);
 
         // f 版设定：Level 2「管道之梦」极其炎热（43°C+）→ 持续消耗理智
         this.player.statusEffects = [];
@@ -332,6 +337,16 @@ class BackroomsGame {
             // f 版设定：Level 404「层级未找到」——损坏的现实会随机把你传送走
             if (this.currentLevel === 404 && Math.random() < dt * 0.04) {
                 this._glitchTeleport();
+            }
+            // f 版设定：Level 11「无尽城市」昼夜循环（白天看不到实体）
+            if (this.currentLevel === 11) {
+                this.dayNightTimer += dt;
+                const night = this.dayNightTimer > 75;
+                if (night !== this._isNight) {
+                    this._isNight = night;
+                    this.renderer.setDayNight(night);
+                    this.entityManager.setNight(night);
+                }
             }
             const nearby = this.entityManager.getEntitiesInRange(this.player.position, 12);
             if (nearby.length > 0 && Math.random() < 0.03) this.audio.playEntityNearby();
@@ -627,6 +642,11 @@ class BackroomsGame {
             let op = 0;
             if (s < 40) op = ((40 - s) / 40) * 0.6;
             so.style.opacity = op.toFixed(3);
+        }
+        // Level 11 昼夜显示
+        if (this.currentLevel === 11) {
+            document.getElementById('level-indicator').textContent =
+                'Level 11 - 无尽城市  [Class 1]  ' + (this._isNight ? '🌙 夜晚' : '🌞 白天');
         }
 
         const se = document.getElementById('status-effects');
