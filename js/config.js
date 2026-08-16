@@ -173,6 +173,11 @@ export const LEVEL_CONFIGS = {
         [MazeRenderFlags.FLICKERING_LIGHTS],
         ['smiler', 'hound', 'skin_stealer', 'partygoer']),
 
+    56: def(56, '故障太空站', '漂浮在深空中的废弃空间站。重力只有 0.8G，舱壁上的舷窗映出无尽的星辰。',
+        TerrainType.CORRIDORS, SurvivalClass.THREE, Environment.INDOOR_ARTIFICIAL,
+        [MazeRenderFlags.FLICKERING_LIGHTS, MazeRenderFlags.FOG_HEAVY],
+        ['smiler', 'hound', 'clump', 'skin_stealer']),
+
     94: def(94, '金斯威尔小镇', '一个被困于永恒暮色中的1950年代小镇。平静却极度诡异。',
         TerrainType.URBAN, SurvivalClass.TWO, Environment.OUTDOOR_TERRESTRIAL,
         [MazeRenderFlags.OPEN_BORDER, MazeRenderFlags.DOUBLE_SIDED, MazeRenderFlags.DARKNESS],

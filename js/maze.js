@@ -157,6 +157,28 @@ export class MazeGenerator {
                 });
                 placed++;
             }
+        } else if (this.config.id === 56) {
+            // Level 56「故障太空站」：舷窗 + 气闸舱门
+            for (let i = 0; i < 16; i++) {
+                const ex = 1 + Math.floor(Math.random() * (this.width - 2));
+                const ey = 1 + Math.floor(Math.random() * (this.height - 2));
+                this.decorations.push({
+                    type: 'porthole',
+                    x: ex * this.cellSize,
+                    z: ey * this.cellSize,
+                    rot: Math.floor(Math.random() * 4) * (Math.PI / 2)
+                });
+            }
+            for (let i = 0; i < 10; i++) {
+                const ex = 1 + Math.floor(Math.random() * (this.width - 2));
+                const ey = 1 + Math.floor(Math.random() * (this.height - 2));
+                this.decorations.push({
+                    type: 'airlock',
+                    x: ex * this.cellSize,
+                    z: ey * this.cellSize,
+                    rot: Math.floor(Math.random() * 4) * (Math.PI / 2)
+                });
+            }
         } else if (this.config.id === 33) {
             // Level 33「电梯」：金属电梯门（每 2 格一个）
             for (let x = 2; x < this.width - 2; x += 2) {

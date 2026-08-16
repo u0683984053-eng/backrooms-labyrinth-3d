@@ -902,6 +902,50 @@ export class GameRenderer {
                     grp.position.set(d.x, 0, d.z);
                     grp.rotation.y = d.rot;
                     single.push(grp);
+                } else if (d.type === 'porthole') {
+                    // Level 56 太空站：舷窗（映出星空）
+                    const grp = new THREE.Group();
+                    const frame = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.09, 8, 16), this.metalMat);
+                    frame.position.y = 1.7;
+                    // 星空（程序化）
+                    if (!this._starTex) {
+                        const c = makeCanvas(128, 128);
+                        const g = c.getContext('2d');
+                        g.fillStyle = '#050810';
+                        g.fillRect(0, 0, 128, 128);
+                        for (let i = 0; i < 140; i++) {
+                            g.fillStyle = 'rgba(220,230,255,' + (0.3 + Math.random() * 0.7).toFixed(2) + ')';
+                            g.fillRect(Math.random() * 128, Math.random() * 128, 1 + Math.random() * 1.5, 1 + Math.random() * 1.5);
+                        }
+                        g.fillStyle = 'rgba(180,220,255,0.95)';
+                        g.beginPath(); g.arc(30, 40, 2.2, 0, Math.PI * 2); g.fill();
+                        this._starTex = finishTexture(new THREE.CanvasTexture(c));
+                    }
+                    const glass = new THREE.Mesh(new THREE.CircleGeometry(0.5, 14), new THREE.MeshBasicMaterial({
+                        map: this._starTex, transparent: true, opacity: 0.95
+                    }));
+                    glass.position.set(0, 1.7, 0.06);
+                    grp.add(frame, glass);
+                    grp.position.set(d.x, 0, d.z);
+                    grp.rotation.y = d.rot;
+                    single.push(grp);
+                } else if (d.type === 'airlock') {
+                    // Level 56 太空站：气闸舱门（环形 + 警示灯）
+                    const grp = new THREE.Group();
+                    const door = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 0.15, 18), this.metalMat);
+                    door.rotation.x = Math.PI / 2;
+                    door.position.y = 1.5;
+                    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.18, 12), new THREE.MeshStandardMaterial({ color: 0x4a4a50, roughness: 0.4, metalness: 0.6 }));
+                    hub.rotation.x = Math.PI / 2;
+                    hub.position.y = 1.5;
+                    const warn = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 5), new THREE.MeshBasicMaterial({
+                        color: 0xff5020, transparent: true, opacity: 0.9
+                    }));
+                    warn.position.set(0.55, 2.2, 0);
+                    grp.add(door, hub, warn);
+                    grp.position.set(d.x, 0, d.z);
+                    grp.rotation.y = d.rot;
+                    single.push(grp);
                 } else if (d.type === 'blackboard') {
                     // Level 52「学校」：教室黑板
                     const grp = new THREE.Group();

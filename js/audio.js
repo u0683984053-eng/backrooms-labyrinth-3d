@@ -147,6 +147,37 @@ export class AudioManager {
                 }
             }, 7200);
             this.levelSounds.push({ stop: () => clearInterval(iv), iv });
+        } else if (levelId === 8) {
+            // 洞穴：远处滴水声（带回声感）
+            const iv = setInterval(() => {
+                if (!this.enabled) return;
+                for (let i = 0; i < 2; i++) {
+                    const s = mk();
+                    s.o.type = 'sine';
+                    s.o.frequency.setValueAtTime(1800 - i * 300, t() + i * 0.25);
+                    s.o.frequency.linearRampToValueAtTime(400, t() + i * 0.25 + 0.12);
+                    s.f.type = 'bandpass'; s.f.frequency.value = 1200; s.f.Q.value = 3;
+                    s.g.gain.setValueAtTime(0.03, t() + i * 0.25);
+                    s.g.gain.exponentialRampToValueAtTime(0.001, t() + i * 0.25 + 0.2);
+                    s.o.stop(t() + i * 0.25 + 0.25);
+                    this.levelSounds.push(s);
+                }
+            }, 3300);
+            this.levelSounds.push({ stop: () => clearInterval(iv), iv });
+        } else if (levelId === 3) {
+            // 电气站：远处电流滋滋声
+            const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * 1.5, this.ctx.sampleRate);
+            const data = buf.getChannelData(0);
+            for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * 0.35;
+            const src = this.ctx.createBufferSource();
+            src.buffer = buf; src.loop = true;
+            const g2 = this.ctx.createGain();
+            const f2 = this.ctx.createBiquadFilter();
+            f2.type = 'highpass'; f2.frequency.value = 1800;
+            g2.gain.value = 0.016;
+            src.connect(f2); f2.connect(g2); g2.connect(this.master);
+            src.start();
+            this.levelSounds.push(src);
         } else if (levelId === 52) {
             // 学校：远处上课铃声
             const iv = setInterval(() => {
