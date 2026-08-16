@@ -142,6 +142,30 @@ export class MazeGenerator {
                     h: 0.8 + Math.random() * 1.6
                 });
             }
+        } else if (this.config.id === 52) {
+            // Level 52「学校」：教室黑板
+            for (let i = 0; i < 6; i++) {
+                const ex = 2 + Math.floor(Math.random() * (this.width - 4));
+                const ey = 2 + Math.floor(Math.random() * (this.height - 4));
+                this.decorations.push({
+                    type: 'blackboard',
+                    x: ex * this.cellSize,
+                    z: ey * this.cellSize,
+                    rot: Math.floor(Math.random() * 4) * (Math.PI / 2)
+                });
+            }
+        } else if (this.config.id === 100) {
+            // Level 100「工厂」：锈蚀机器
+            for (let i = 0; i < 7; i++) {
+                const ex = 2 + Math.floor(Math.random() * (this.width - 4));
+                const ey = 2 + Math.floor(Math.random() * (this.height - 4));
+                this.decorations.push({
+                    type: 'machine',
+                    x: ex * this.cellSize + (Math.random() - 0.5) * 2,
+                    z: ey * this.cellSize + (Math.random() - 0.5) * 2,
+                    rot: Math.floor(Math.random() * 4) * (Math.PI / 2)
+                });
+            }
         } else if (this.config.id === 9 || this.config.id === 94) {
             // Level 9 / 94：郊区路灯
             for (let i = 0; i < 18; i++) {
@@ -359,8 +383,9 @@ export class MazeGenerator {
     _genPipes() {
         this._genCorridors();
         this.wallHeight = 2.2;
-        for (let x = 2; x < this.width - 2; x += 4)
-            for (let y = 2; y < this.height - 2; y += 4)
+        // 管道装饰（间隔 5 格，控制三角形数量）
+        for (let x = 2; x < this.width - 2; x += 5)
+            for (let y = 2; y < this.height - 2; y += 5)
                 this.decorations.push({ type: 'pipe', x: x * this.cellSize, z: y * this.cellSize });
     }
 

@@ -193,6 +193,24 @@ export class AudioManager {
         this._noise(0.2, 0.4, 200);
     }
 
+    // 派对客诡异"音乐"（f 版设定：派对客邀请你参加派对）
+    playParty() {
+        if (!this.enabled) return;
+        const t = this.ctx.currentTime;
+        const notes = [660, 784, 880, 1046, 880, 784];
+        for (let i = 0; i < notes.length; i++) {
+            const o = this.ctx.createOscillator();
+            const g = this.ctx.createGain();
+            o.type = 'triangle';
+            o.frequency.value = notes[i];
+            const tt = t + i * 0.13;
+            g.gain.setValueAtTime(0.05, tt);
+            g.gain.exponentialRampToValueAtTime(0.001, tt + 0.12);
+            o.connect(g); g.connect(this.master);
+            o.start(tt); o.stop(tt + 0.13);
+        }
+    }
+
     // 卡出（noclip）音效：低频轰鸣 + 噪声
     playNoclip() {
         if (!this.enabled) return;

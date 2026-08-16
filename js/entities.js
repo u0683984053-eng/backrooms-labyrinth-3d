@@ -67,6 +67,7 @@ export class EntityManager {
                 if (e.soundTimer <= 0) {
                     if (e.type === 'hound' && this.audio) this.audio.playBark();
                     if (e.type === 'scratcher' && this.audio) this.audio.playScratch();
+                    if (e.type === 'partygoer' && this.audio) this.audio.playParty();
                     e.soundTimer = 4 + Math.random() * 3;
                 }
                 // 微笑者：被其注视会加速理智流失（f 版设定）

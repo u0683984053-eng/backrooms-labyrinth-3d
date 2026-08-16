@@ -789,8 +789,47 @@ export class GameRenderer {
                     grp.add(pole, arm, bulb, halo);
                     grp.position.set(d.x, 0, d.z);
                     single.push(grp);
+                } else if (d.type === 'blackboard') {
+                    // Level 52「学校」：教室黑板
+                    const grp = new THREE.Group();
+                    const frame = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.12, 0.1), this.woodDarkMat);
+                    frame.position.y = 1.9;
+                    const board = new THREE.Mesh(new THREE.BoxGeometry(3.0, 1.5, 0.06), new THREE.MeshStandardMaterial({
+                        color: 0x1e3a2a, roughness: 0.6
+                    }));
+                    board.position.y = 1.5;
+                    // 粉笔字迹
+                    const chalk = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 1.2), new THREE.MeshBasicMaterial({
+                        color: 0xd8d8d0, transparent: true, opacity: 0.5, side: THREE.DoubleSide
+                    }));
+                    chalk.position.set(0, 1.5, 0.04);
+                    grp.add(frame, board, chalk);
+                    grp.position.set(d.x, 0, d.z);
+                    grp.rotation.y = d.rot;
+                    single.push(grp);
+                } else if (d.type === 'machine') {
+                    // Level 100「工厂」：锈蚀机器
+                    const grp = new THREE.Group();
+                    const rustMat = new THREE.MeshStandardMaterial({ color: 0x6a4a38, roughness: 0.85, metalness: 0.3 });
+                    const body = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.8, 1.4), rustMat);
+                    body.position.y = 0.9;
+                    const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 2.4, 6), rustMat);
+                    pipe.position.set(0.9, 1.6, 0);
+                    pipe.rotation.z = Math.PI / 3;
+                    const gauge = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.05, 10), new THREE.MeshStandardMaterial({
+                        color: 0x303030, roughness: 0.4, metalness: 0.5
+                    }));
+                    gauge.position.set(-0.5, 1.55, 0.72);
+                    gauge.rotation.x = Math.PI / 2;
+                    const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 5), new THREE.MeshBasicMaterial({
+                        color: 0xff4020, transparent: true, opacity: 0.9
+                    }));
+                    lamp.position.set(-0.5, 1.75, 0.72);
+                    grp.add(body, pipe, gauge, lamp);
+                    grp.position.set(d.x, 0, d.z);
+                    grp.rotation.y = d.rot;
+                    single.push(grp);
                 } else if (d.type === 'monolith') {
-                    // Level 999「最后的延伸」：中央圣柱 + 天光
                     const grp = new THREE.Group();
                     const stoneMat = new THREE.MeshStandardMaterial({ color: 0x8a8578, roughness: 0.85 });
                     const pillar = new THREE.Mesh(new THREE.BoxGeometry(4, 9, 4), stoneMat);
@@ -1150,6 +1189,36 @@ export class GameRenderer {
                 const head = new THREE.Mesh(new THREE.SphereGeometry(0.26, 8, 6), mat);
                 head.position.y = 1.85; head.castShadow = true;
                 group.add(body, head);
+                break;
+            }
+            case 'clump': {
+                // 团块（f 版设定）：一团缠绕的肢体
+                const limbMat = new THREE.MeshStandardMaterial({ color: 0x6a4a4a, roughness: 0.9 });
+                const core = new THREE.Mesh(new THREE.SphereGeometry(0.5, 10, 8), limbMat);
+                core.position.y = 0.7; core.castShadow = true;
+                group.add(core);
+                for (let i = 0; i < 5; i++) {
+                    const limb = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.1, 1.0, 5), limbMat);
+                    const a = (i / 5) * Math.PI * 2;
+                    limb.position.set(Math.cos(a) * 0.45, 0.7 + Math.sin(i * 2.4) * 0.35, Math.sin(a) * 0.45);
+                    limb.rotation.set(Math.sin(i * 1.7) * 1.2, a, Math.cos(i * 2.1) * 1.2);
+                    group.add(limb);
+                }
+                break;
+            }
+            case 'skin_stealer': {
+                // 皮行者（f 版设定）：披着受害者皮肤的怪物
+                const body = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.34, 1.7, 7), mat);
+                body.position.y = 0.85; body.castShadow = true;
+                const head = new THREE.Mesh(new THREE.SphereGeometry(0.24, 8, 6), mat);
+                head.position.y = 1.82; head.castShadow = true;
+                // 下垂的"皮"
+                const skin = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 1.1), new THREE.MeshStandardMaterial({
+                    color: 0xc8a080, roughness: 0.8, side: THREE.DoubleSide, transparent: true, opacity: 0.85
+                }));
+                skin.position.set(0, 0.75, -0.2);
+                skin.rotation.x = 0.2;
+                group.add(body, head, skin);
                 break;
             }
             case 'thing_on_level_7': {
