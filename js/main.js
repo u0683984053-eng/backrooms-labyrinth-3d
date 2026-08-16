@@ -94,12 +94,14 @@ class BackroomsGame {
         const slotKeys = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5'];
         const si = slotKeys.indexOf(e.code);
         if (si >= 0 && !this.backpackOpen && !this.cheatOpen) {
-            this.inventory.useItem(si, this.player);
+            const r = this.inventory.useItem(si, this.player);
+            if (r && r.action === 'throwFireSalt') this._throwFireSalt();
             this._refreshInventory();
         }
 
         if (this.backpackOpen && e.code === 'Enter' && this.inventory.selectedIndex >= 0) {
-            this.inventory.useItem(this.inventory.selectedIndex, this.player);
+            const r = this.inventory.useItem(this.inventory.selectedIndex, this.player);
+            if (r && r.action === 'throwFireSalt') this._throwFireSalt();
             this._refreshInventory();
             this.toggleBackpack(false);
         }
@@ -282,6 +284,32 @@ class BackroomsGame {
         const ang = Math.atan2(dir.x, -dir.z);
         el.style.transform = 'translate(-50%,-50%) rotate(' + ang + 'rad)';
         el.style.opacity = Math.min(1, (bd - 8) / 40).toFixed(2);
+    }
+
+    // 火盐投掷（f 版设定：少数能对抗实体的手段）
+    _throwFireSalt() {
+        const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(this.renderer.camera.quaternion);
+        let best = null, bd = 24;
+        for (const e of this.entityManager.entities) {
+            if (!e.alive) continue;
+            const d = e.pos.distanceTo(this.player.position);
+            if (d > bd) continue;
+            const dirTo = e.pos.clone().sub(this.player.position);
+            dirTo.y = 0; dirTo.normalize();
+            if (fwd.dot(dirTo) < 0.4) continue; // 视线 60° 内
+            best = e; bd = d;
+        }
+        if (best) {
+            this.entityManager.damageEntity(best, 60);
+            this.audio.playFireSalt();
+            this.renderer.createExplosion(best.pos);
+        } else {
+            this.audio.playStep();
+            const hintEl = document.getElementById('interaction-hint');
+            hintEl.classList.remove('hidden');
+            hintEl.textContent = '火盐掷向虚空...';
+            setTimeout(() => { if (!this._nearestPickup(2.2)) hintEl.classList.add('hidden'); }, 1200);
+        }
     }
 
     // 最近的可拾取补给

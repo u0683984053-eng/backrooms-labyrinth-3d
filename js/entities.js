@@ -132,6 +132,17 @@ export class EntityManager {
         this.entities = [];
     }
 
+    // 实体受到伤害（f 版设定：火盐等少数手段能对抗实体）
+    damageEntity(e, dmg) {
+        if (!e || !e.alive) return;
+        e.health -= dmg;
+        if (e.health <= 0) {
+            e.alive = false;
+            e.mesh.visible = false;
+            this.renderer.removeEntityMesh(e.mesh);
+        }
+    }
+
     getEntitiesInRange(pos, range) {
         return this.entities.filter(e => e.alive && e.pos.distanceTo(pos) <= range);
     }

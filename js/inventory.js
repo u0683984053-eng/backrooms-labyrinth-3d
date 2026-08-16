@@ -19,6 +19,11 @@ export class Inventory {
             description: '恢复15生命值和20体力值。', stackable: true, count: 3,
             effect: { heal: 15, stamina: 20 }
         });
+        this.addItem({
+            id: 'fire_salt', name: '火盐', icon: '🔥', type: 'weapon',
+            description: '后室中少数能对抗实体的手段。朝视线方向投掷，灼烧实体。', stackable: true, count: 2,
+            effect: { throwFireSalt: true }
+        });
     }
 
     addItem(item) {
@@ -66,6 +71,11 @@ export class Inventory {
             player.toggleFlashlight();
             item.equipped = !item.equipped;
             return true;
+        }
+
+        if (item.effect && item.effect.throwFireSalt) {
+            this.removeItem(index);
+            return { action: 'throwFireSalt' };
         }
 
         return false;

@@ -175,6 +175,24 @@ export class AudioManager {
         o.start(); o.stop(t + 0.22);
     }
 
+    // 火盐投掷爆炸
+    playFireSalt() {
+        if (!this.enabled) return;
+        const t = this.ctx.currentTime;
+        const o = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        const f = this.ctx.createBiquadFilter();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(120, t);
+        o.frequency.exponentialRampToValueAtTime(30, t + 0.5);
+        f.type = 'lowpass'; f.frequency.value = 400;
+        g.gain.setValueAtTime(0.3, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
+        o.connect(f); f.connect(g); g.connect(this.master);
+        o.start(); o.stop(t + 0.6);
+        this._noise(0.2, 0.4, 200);
+    }
+
     // 卡出（noclip）音效：低频轰鸣 + 噪声
     playNoclip() {
         if (!this.enabled) return;

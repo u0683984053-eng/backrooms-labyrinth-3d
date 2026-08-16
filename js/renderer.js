@@ -1003,6 +1003,26 @@ export class GameRenderer {
     addEntityMesh(m) { this.entityGroup.add(m); }
     removeEntityMesh(m) { this.entityGroup.remove(m); }
 
+    // 爆炸/灼烧特效（火盐命中实体）
+    createExplosion(pos) {
+        const glow = new THREE.Mesh(new THREE.SphereGeometry(0.9, 12, 8), new THREE.MeshBasicMaterial({
+            color: 0xffaa33, transparent: true, opacity: 0.9,
+            blending: THREE.AdditiveBlending, depthWrite: false
+        }));
+        glow.position.copy(pos);
+        glow.position.y += 1;
+        this.scene.add(glow);
+        const t0 = performance.now();
+        const tick = () => {
+            const t = (performance.now() - t0) / 550;
+            if (t >= 1) { this.scene.remove(glow); return; }
+            glow.scale.setScalar(1 + t * 3.5);
+            glow.material.opacity = 0.9 * (1 - t);
+            requestAnimationFrame(tick);
+        };
+        tick();
+    }
+
     render() {
         // 399 下雨动画
         if (this.rainPoints && this.rainPoints.visible) {
