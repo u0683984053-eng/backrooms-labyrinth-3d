@@ -21,6 +21,7 @@ export class MazeGenerator {
         this.decorations = [];
         this.entitySpawns = [];
         this.platforms = [];
+        this.exits = [];
     }
 
     generate() {
@@ -35,7 +36,8 @@ export class MazeGenerator {
             trees: this.trees,
             decorations: this.decorations,
             entitySpawns: this.entitySpawns,
-            platforms: this.platforms
+            platforms: this.platforms,
+            exits: this.exits
         };
     }
 
@@ -76,6 +78,65 @@ export class MazeGenerator {
         }
         this._placeEntities();
         this._addVerticality();
+        this._addExits();
+        this._addFurniture();
+    }
+
+    // ---- 多出口系统：主出口 + 1~2 个隐藏出口（夹层上有一个） ----
+    _addExits() {
+        this.exits = [];
+        if (this.exitPos) {
+            this.exits.push({ x: this.exitPos.x, z: this.exitPos.z, hidden: false });
+        }
+        // 隐藏出口 1：夹层平台上
+        const deck = this.platforms.find(p => p.type === 'deck');
+        if (deck) {
+            this.exits.push({ x: deck.x + deck.w / 2 - 2, z: deck.z - deck.d / 2 + 2, hidden: true });
+        }
+        // 隐藏出口 2：远离起点的随机开放格
+        if (!this.config.renderFlags || !this.config.renderFlags.includes(MazeRenderFlags.OPEN_BORDER)) {
+            for (let t = 0; t < 40; t++) {
+                const ex = 3 + Math.floor(Math.random() * (this.width - 6));
+                const ey = 3 + Math.floor(Math.random() * (this.height - 6));
+                const sc = Math.floor(this.startPos.x / this.cellSize);
+                const sz = Math.floor(this.startPos.z / this.cellSize);
+                if (Math.abs(ex - sc) < 6 && Math.abs(ey - sz) < 6) continue;
+                if (this._cellBlocked(ex, ey, 1)) continue;
+                this.exits.push({ x: ex * this.cellSize, z: ey * this.cellSize, hidden: true });
+                break;
+            }
+        }
+        // 兼容旧字段：主出口仍在 exitPos
+    }
+
+    // ---- 按层级设定生成家具装饰（f 版设定） ----
+    _addFurniture() {
+        const t = this.config.terrainType;
+        const counts = {
+            [TerrainType.OFFICE]: { desk: 10, chair: 8, locker: 4 },
+            [TerrainType.HOTEL]: { bed: 6, chair: 4, locker: 6 },
+            [TerrainType.HALLS]: { locker: 8 },
+            [TerrainType.HOSPITAL]: { bed: 6, locker: 6 },
+            [TerrainType.WAREHOUSE]: { cratepile: 8, shelf: 6 },
+            [TerrainType.PIPES]: { valve: 10 },
+            [TerrainType.COMPLEX]: { cratepile: 5, shelf: 10 },
+            [TerrainType.INDUSTRIAL]: { cratepile: 4 },
+            [TerrainType.ROOMS]: { cratepile: 3 },
+        };
+        const plan = counts[t];
+        if (!plan) return;
+        for (const [type, n] of Object.entries(plan)) {
+            for (let i = 0; i < n; i++) {
+                const ex = 2 + Math.floor(Math.random() * (this.width - 4));
+                const ey = 2 + Math.floor(Math.random() * (this.height - 4));
+                if (this._cellBlocked(ex, ey, 1)) continue;
+                const jx = ex * this.cellSize + (Math.random() - 0.5) * 2;
+                const jz = ey * this.cellSize + (Math.random() - 0.5) * 2;
+                let rot = Math.floor(Math.random() * 4) * (Math.PI / 2);
+                if (type === 'valve') rot = Math.random() * Math.PI * 2;
+                this.decorations.push({ type, x: jx, z: jz, rot });
+            }
+        }
     }
 
     // ---- 3D 垂直维度 ----

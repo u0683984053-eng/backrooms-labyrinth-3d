@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { MazeRenderFlags } from './config.js';
 
 const WALL_H = 3.5;
@@ -9,13 +8,21 @@ const RAIL_H = 0.14;    // 墙顶装饰线高度
 const WALL_T = 0.3;     // 墙厚
 
 // ---------------------------------------------------------------
-// 程序化纹理 —— 依据后室维基 Level 0 经典图的真实配色：
-// 素面淡黄墙纸（无条纹）、黄褐潮湿地毯、冷白污渍天花板
+// 程序化纹理 —— 依据后室 Level 0 经典图实测配色：
+// 素面淡黄墙纸、黄褐潮湿地毯、冷白污渍天花板
 // ---------------------------------------------------------------
 function makeCanvas(w, h) {
     const c = document.createElement('canvas');
     c.width = w; c.height = h;
     return c;
+}
+
+// 纹理统一收尾：sRGB 颜色空间（否则整幅画面会被压暗约 2.2 伽马）
+function finishTexture(t, repeat = false) {
+    t.colorSpace = THREE.SRGBColorSpace;
+    if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(1, 1); }
+    t.anisotropy = 4;
+    return t;
 }
 
 function makeWallpaperTexture() {
@@ -24,7 +31,7 @@ function makeWallpaperTexture() {
     // 素面淡黄墙纸（经典图主色 ≈ #c8b870，偏橄榄黄）
     g.fillStyle = '#c8b870';
     g.fillRect(0, 0, 256, 256);
-    // 极其轻微的竖向明暗变化（模拟墙面受光不均，几乎看不出条纹）
+    // 极其轻微的竖向明暗变化（模拟墙面受光不均）
     for (let x = 0; x < 256; x += 16) {
         const a = (Math.sin(x * 0.35) * 0.5 + 0.5) * 0.045;
         g.fillStyle = 'rgba(90,75,35,' + a.toFixed(3) + ')';
@@ -47,16 +54,13 @@ function makeWallpaperTexture() {
         d[i] += n; d[i + 1] += n; d[i + 2] += n * 0.7;
     }
     g.putImageData(img, 0, 0);
-    const t = new THREE.CanvasTexture(c);
-    t.wrapS = t.wrapT = THREE.RepeatWrapping;
-    t.anisotropy = 4;
-    return t;
+    return finishTexture(new THREE.CanvasTexture(c), true);
 }
 
 function makeCarpetTexture() {
     const c = makeCanvas(256, 256);
     const g = c.getContext('2d');
-    // 黄褐色潮湿旧地毯（经典图 ≈ #8f7f48，比墙纸深、更棕）
+    // 黄褐色潮湿旧地毯（经典图 ≈ #8f7f48）
     g.fillStyle = '#8f7f48';
     g.fillRect(0, 0, 256, 256);
     // 纤维噪点
@@ -67,7 +71,7 @@ function makeCarpetTexture() {
         d[i] += n; d[i + 1] += n; d[i + 2] += n * 0.55;
     }
     g.putImageData(img, 0, 0);
-    // 潮湿深色水渍（经典图地毯明显潮湿发黑）
+    // 潮湿深色水渍
     for (let i = 0; i < 20; i++) {
         const x = Math.random() * 256, y = Math.random() * 256, r = 10 + Math.random() * 44;
         const grd = g.createRadialGradient(x, y, 0, x, y, r);
@@ -76,16 +80,13 @@ function makeCarpetTexture() {
         g.fillStyle = grd;
         g.fillRect(x - r, y - r, r * 2, r * 2);
     }
-    const t = new THREE.CanvasTexture(c);
-    t.wrapS = t.wrapT = THREE.RepeatWrapping;
-    t.anisotropy = 4;
-    return t;
+    return finishTexture(new THREE.CanvasTexture(c), true);
 }
 
 function makeCeilingTexture() {
     const c = makeCanvas(256, 256);
     const g = c.getContext('2d');
-    // 冷白灰天花板（经典图 ≈ #b8b8ac，荧光灯照得偏冷）
+    // 冷白灰天花板（经典图 ≈ #b8b8ac）
     g.fillStyle = '#b8b8ac';
     g.fillRect(0, 0, 256, 256);
     // 天花板砖缝
@@ -102,14 +103,11 @@ function makeCeilingTexture() {
         g.fillStyle = grd;
         g.fillRect(x - r, y - r, r * 2, r * 2);
     }
-    const t = new THREE.CanvasTexture(c);
-    t.wrapS = t.wrapT = THREE.RepeatWrapping;
-    t.anisotropy = 4;
-    return t;
+    return finishTexture(new THREE.CanvasTexture(c), true);
 }
 
 function makeSmileTexture() {
-    // 微笑者：苍白发光面孔 + 黑色眼睛 + 咧嘴笑（后室设定）
+    // 微笑者：苍白发光面孔 + 黑色眼睛 + 咧嘴笑（f 版设定）
     const c = makeCanvas(256, 256);
     const g = c.getContext('2d');
     g.fillStyle = '#e8e8e4';
@@ -120,9 +118,7 @@ function makeSmileTexture() {
     g.beginPath(); g.ellipse(128, 166, 54, 42, 0, 0, Math.PI); g.fill();
     g.fillStyle = '#e8e8e4';
     for (let i = 0; i < 6; i++) g.fillRect(104 + i * 9, 162, 6, 11);
-    const t = new THREE.CanvasTexture(c);
-    t.anisotropy = 4;
-    return t;
+    return finishTexture(new THREE.CanvasTexture(c));
 }
 
 function makeCrateTexture() {
@@ -140,9 +136,7 @@ function makeCrateTexture() {
         g.fillStyle = 'rgba(35,22,10,' + (Math.random() * 0.2).toFixed(2) + ')';
         g.fillRect(Math.random() * 128, Math.random() * 128, 2 + Math.random() * 4, 2 + Math.random() * 4);
     }
-    const t = new THREE.CanvasTexture(c);
-    t.anisotropy = 2;
-    return t;
+    return finishTexture(new THREE.CanvasTexture(c));
 }
 
 // ---------------------------------------------------------------
@@ -156,12 +150,14 @@ export class GameRenderer {
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        // legacy 光照：PointLight 强度为直接系数（物理模式会把小强度在远距离衰减到近乎零）
+        this.renderer.useLegacyLights = true;
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 1.32;
+        this.renderer.toneMappingExposure = 1.5;
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x0a0a05);
+        this.scene.background = new THREE.Color(0x171410);
 
         this.camera = new THREE.PerspectiveCamera(78, window.innerWidth / window.innerHeight, 0.1, 260);
 
@@ -191,19 +187,24 @@ export class GameRenderer {
         this.crateMat = new THREE.MeshStandardMaterial({ map: this.texCrate, roughness: 0.85 });
         this.lampFrameMat = new THREE.MeshStandardMaterial({ color: 0x2e2e30, roughness: 0.45, metalness: 0.6 });
         this.lampTubeMat = new THREE.MeshStandardMaterial({
-            color: 0xffffff, emissive: 0xfffdf4, emissiveIntensity: 2.8, roughness: 0.35
+            color: 0xffffff, emissive: 0xfffdf4, emissiveIntensity: 3.0, roughness: 0.35
         });
         this.lampGlowMat = new THREE.MeshBasicMaterial({
-            color: 0xfff8e8, transparent: true, opacity: 0.15,
+            color: 0xfff8e8, transparent: true, opacity: 0.18,
             blending: THREE.AdditiveBlending, depthWrite: false
         });
+        // 家具材质
+        this.woodMat = new THREE.MeshStandardMaterial({ color: 0x7a5f3a, roughness: 0.85 });
+        this.woodDarkMat = new THREE.MeshStandardMaterial({ color: 0x5a4428, roughness: 0.9 });
+        this.metalMat = new THREE.MeshStandardMaterial({ color: 0x5a5a60, roughness: 0.5, metalness: 0.55 });
+        this.fabricMat = new THREE.MeshStandardMaterial({ color: 0x6a5a50, roughness: 0.95 });
+        this.fabricLightMat = new THREE.MeshStandardMaterial({ color: 0x8a7a6a, roughness: 0.95 });
 
         this.ceilingLights = [];
-        this.lampMeshes = [];
         this._setupLighting();
 
-        // 手电筒
-        this.flashlight = new THREE.SpotLight(0xfff6d0, 5, 34, Math.PI / 6.5, 0.42, 1.1);
+        // 手电筒（f 版设定：黑暗层级的主要光源）
+        this.flashlight = new THREE.SpotLight(0xfff6d0, 6.5, 38, Math.PI / 6.5, 0.42, 1.1);
         this.flashlight.castShadow = true;
         this.flashlight.shadow.mapSize.set(512, 512);
         this.flashlight.visible = false;
@@ -240,6 +241,10 @@ export class GameRenderer {
 
         this.bobTime = 0;
 
+        // 漂浮尘埃粒子（f 版设定：Level 0 潮湿闷热的空气感）
+        this.dustPoints = null;
+        this._setupDust();
+
         window.addEventListener('resize', () => {
             this.camera.aspect = window.innerWidth / window.innerHeight;
             this.camera.updateProjectionMatrix();
@@ -247,18 +252,37 @@ export class GameRenderer {
         });
     }
 
+    _setupDust() {
+        const N = 350;
+        const pos = new Float32Array(N * 3);
+        for (let i = 0; i < N; i++) {
+            pos[i * 3] = (Math.random() - 0.5) * 140;
+            pos[i * 3 + 1] = 0.3 + Math.random() * 2.8;
+            pos[i * 3 + 2] = (Math.random() - 0.5) * 140;
+        }
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+        const mat = new THREE.PointsMaterial({
+            color: 0xd8d0b8, size: 0.035, transparent: true, opacity: 0.35,
+            depthWrite: false, sizeAttenuation: true
+        });
+        this.dustPoints = new THREE.Points(geo, mat);
+        this.dustPoints.frustumCulled = false;
+        this.scene.add(this.dustPoints);
+    }
+
     _setupLighting() {
-        this.ambient = new THREE.AmbientLight(0x4a4630, 1.15);
+        // f 版设定：荧光灯是室内主要光源，明亮均匀
+        this.ambient = new THREE.AmbientLight(0x5a5440, 1.5);
         this.scene.add(this.ambient);
-        this.hemi = new THREE.HemisphereLight(0x8a8470, 0x3a3520, 0.4);
+        this.hemi = new THREE.HemisphereLight(0x9a9480, 0x4a4530, 0.7);
         this.scene.add(this.hemi);
 
-        // 少量大范围点光源（经典后室的"荧光灯均匀照明"感）
-        // 每 40 单位一个 → 全图仅 16 个
+        // 少量大范围点光源（每 40 单位一个 → 全图仅 16 个；legacy 模式直接乘）
         this.ceilingLights = [];
         for (let x = -60; x <= 60; x += 40) {
             for (let z = -60; z <= 60; z += 40) {
-                const pl = new THREE.PointLight(0xfff8e0, 2.6, 34, 1.7);
+                const pl = new THREE.PointLight(0xfff8e0, 4.5, 42, 1.6);
                 pl.position.set(x, WALL_H - 0.6, z);
                 this.scene.add(pl);
                 this.ceilingLights.push(pl);
@@ -270,15 +294,21 @@ export class GameRenderer {
         this.config = config;
         const flags = config.renderFlags || [];
 
-        const fogDensity = flags.includes(MazeRenderFlags.FOG_HEAVY) ? 0.0013
-            : flags.includes(MazeRenderFlags.NO_FOG) ? 0.00015 : 0.0007;
-        this.scene.fog = new THREE.FogExp2(0x0a0a05, fogDensity);
+        const fogDensity = flags.includes(MazeRenderFlags.FOG_HEAVY) ? 0.0011
+            : flags.includes(MazeRenderFlags.NO_FOG) ? 0.00012 : 0.0006;
+        this.scene.fog = new THREE.FogExp2(0x171410, fogDensity);
 
         const dark = flags.includes(MazeRenderFlags.DARKNESS);
-        this.ambient.intensity = dark ? 0.08 : 1.15;
-        this.hemi.intensity = dark ? 0.03 : 0.4;
-        for (const l of this.ceilingLights) l.intensity = dark ? 0 : 2.4;
-        this.renderer.toneMappingExposure = dark ? 0.9 : 1.2;
+        this.ambient.intensity = dark ? 0.1 : 1.5;
+        this.hemi.intensity = dark ? 0.04 : 0.7;
+        for (const l of this.ceilingLights) l.intensity = dark ? 0 : 4.5;
+        this.renderer.toneMappingExposure = dark ? 1.0 : 1.5;
+        // 层级微调：399 霓虹深渊是夜晚城市，但保持可见
+        if (this.config && this.config.id === 399) {
+            this.ambient.intensity = 1.85;
+            this.hemi.intensity = 0.85;
+            this.renderer.toneMappingExposure = 1.65;
+        }
 
         const ds = flags.includes(MazeRenderFlags.DOUBLE_SIDED);
         const wf = flags.includes(MazeRenderFlags.WIREFRAME);
@@ -291,13 +321,21 @@ export class GameRenderer {
 
         this._hasCeiling = !flags.includes(MazeRenderFlags.NO_CEILING);
         this._openBorder = flags.includes(MazeRenderFlags.OPEN_BORDER);
+
+        // 尘埃粒子：室内层级可见
+        if (this.dustPoints) this.dustPoints.visible = !flags.includes(MazeRenderFlags.OPEN_BORDER) && !flags.includes(MazeRenderFlags.DARKNESS);
     }
 
-    // 合并同材质几何体 → 一次 draw call
-    _merge(geos) {
-        const m = mergeGeometries(geos, false);
-        geos.forEach(g => g.dispose());
-        return m;
+    // ---- InstancedMesh 辅助：同材质几何体 1 次 draw call ----
+    _instanced(geo, mat, matrices, group, cast, recv) {
+        if (matrices.length === 0) return null;
+        const inst = new THREE.InstancedMesh(geo, mat, matrices.length);
+        for (let i = 0; i < matrices.length; i++) inst.setMatrixAt(i, matrices[i]);
+        inst.instanceMatrix.needsUpdate = true;
+        inst.castShadow = cast; inst.receiveShadow = recv;
+        inst.frustumCulled = false;
+        group.add(inst);
+        return inst;
     }
 
     buildMaze(mazeData) {
@@ -313,9 +351,30 @@ export class GameRenderer {
         const openBorder = this._openBorder;
         const W = grid.length, H = grid[0].length;
 
-        // ---- 收集几何体（后续合并） ----
-        const floorGeos = [], ceilGeos = [], wallGeos = [], skirtGeos = [], railGeos = [];
-        const lampFrameGeos = [], lampTubeGeos = [], lampGlowGeos = [];
+        // 单位几何体（矩阵里放缩放）
+        const unitBox = new THREE.BoxGeometry(1, 1, 1);
+        const unitPlane = new THREE.PlaneGeometry(1, 1);
+        const unitTrunk = new THREE.CylinderGeometry(0.18, 0.32, 1, 6);
+        const unitCrown = new THREE.SphereGeometry(0.28, 6, 4);
+        const unitPillar = new THREE.CylinderGeometry(0.45, 0.55, 1, 7);
+        const unitPipe = new THREE.CylinderGeometry(0.22, 0.22, 1, 7);
+
+        // 复用矩阵/向量对象
+        const _m = new THREE.Matrix4();
+        const _q = new THREE.Quaternion();
+        const _p = new THREE.Vector3();
+        const _s = new THREE.Vector3();
+        const _qX90 = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
+        const _qY90 = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI / 2, 0));
+        const _qId = new THREE.Quaternion();
+        const mat = (px, py, pz, q, sx, sy, sz) => {
+            _p.set(px, py, pz); _s.set(sx, sy, sz);
+            _m.compose(_p, q, _s);
+            return _m.clone();
+        };
+
+        const floorMs = [], ceilMs = [], wallMs = [], skirtMs = [], railMs = [];
+        const lampFrameMs = [], lampTubeMs = [], lampGlowMs = [];
 
         for (let x = 0; x < W; x++) {
             for (let y = 0; y < H; y++) {
@@ -323,81 +382,45 @@ export class GameRenderer {
                 const wx = x * CELL_S;
                 const wz = y * CELL_S;
 
-                // 地板
-                const fg = new THREE.PlaneGeometry(CELL_S, CELL_S);
-                fg.rotateX(-Math.PI / 2);
-                fg.translate(wx, 0, wz);
-                floorGeos.push(fg);
+                floorMs.push(mat(wx, 0, wz, _qX90, CELL_S, 1, CELL_S));
+                if (this._hasCeiling) ceilMs.push(mat(wx, WALL_H, wz, _qX90, CELL_S, 1, CELL_S));
 
-                // 天花板
-                if (this._hasCeiling) {
-                    const cg = new THREE.PlaneGeometry(CELL_S, CELL_S);
-                    cg.rotateX(-Math.PI / 2);
-                    cg.translate(wx, WALL_H, wz);
-                    ceilGeos.push(cg);
-                }
-
-                // 四面墙（含踢脚线/顶线）
                 const walls = [
-                    { hit: cell.walls[0] && (!openBorder || y > 0), dir: 'N', p: [wx, wz - CELL_S / 2] },
-                    { hit: cell.walls[1] && (!openBorder || x < W - 1), dir: 'E', p: [wx + CELL_S / 2, wz] },
-                    { hit: cell.walls[2] && (!openBorder || y < H - 1), dir: 'S', p: [wx, wz + CELL_S / 2] },
-                    { hit: cell.walls[3] && (!openBorder || x > 0), dir: 'W', p: [wx - CELL_S / 2, wz] },
+                    { hit: cell.walls[0] && (!openBorder || y > 0), rot: false, p: [wx, wz - CELL_S / 2] },
+                    { hit: cell.walls[1] && (!openBorder || x < W - 1), rot: true, p: [wx + CELL_S / 2, wz] },
+                    { hit: cell.walls[2] && (!openBorder || y < H - 1), rot: false, p: [wx, wz + CELL_S / 2] },
+                    { hit: cell.walls[3] && (!openBorder || x > 0), rot: true, p: [wx - CELL_S / 2, wz] },
                 ];
                 for (const wd of walls) {
                     if (!wd.hit) continue;
-                    // 墙主体
-                    const wg = new THREE.BoxGeometry(CELL_S, WALL_H, WALL_T);
-                    if (wd.dir === 'E' || wd.dir === 'W') wg.rotateY(Math.PI / 2);
-                    wg.translate(wd.p[0], WALL_H / 2, wd.p[1]);
-                    wallGeos.push(wg);
-                    // 踢脚线
-                    const sg = new THREE.BoxGeometry(CELL_S, SKIRT_H, WALL_T + 0.1);
-                    if (wd.dir === 'E' || wd.dir === 'W') sg.rotateY(Math.PI / 2);
-                    sg.translate(wd.p[0], SKIRT_H / 2 + 0.01, wd.p[1]);
-                    skirtGeos.push(sg);
-                    // 顶线
-                    const rg = new THREE.BoxGeometry(CELL_S, RAIL_H, WALL_T + 0.08);
-                    if (wd.dir === 'E' || wd.dir === 'W') rg.rotateY(Math.PI / 2);
-                    rg.translate(wd.p[0], WALL_H - RAIL_H / 2 - 0.01, wd.p[1]);
-                    railGeos.push(rg);
+                    const q = wd.rot ? _qY90 : _qId;
+                    wallMs.push(mat(wd.p[0], WALL_H / 2, wd.p[1], q, CELL_S, WALL_H, WALL_T));
+                    skirtMs.push(mat(wd.p[0], SKIRT_H / 2 + 0.01, wd.p[1], q, CELL_S, SKIRT_H, WALL_T + 0.1));
+                    railMs.push(mat(wd.p[0], WALL_H - RAIL_H / 2 - 0.01, wd.p[1], q, CELL_S, RAIL_H, WALL_T + 0.08));
                 }
             }
         }
 
-        // 荧光灯箱：每 15 单位一个（经典三管灯箱），合并为 3 个 mesh
+        // 荧光灯箱：每 15 单位一个（经典三管灯箱）
         for (let x = -60; x <= 60; x += 15) {
             for (let z = -60; z <= 60; z += 15) {
-                const fx = new THREE.BoxGeometry(3.6, 0.14, 0.55);
-                fx.translate(x, WALL_H - 0.07, z);
-                lampFrameGeos.push(fx);
+                lampFrameMs.push(mat(x, WALL_H - 0.07, z, _qId, 3.6, 0.14, 0.55));
                 for (const dz of [-0.17, 0, 0.17]) {
-                    const tg = new THREE.BoxGeometry(3.4, 0.05, 0.09);
-                    tg.translate(x, WALL_H - 0.17, z + dz);
-                    lampTubeGeos.push(tg);
+                    lampTubeMs.push(mat(x, WALL_H - 0.17, z + dz, _qId, 3.4, 0.05, 0.09));
                 }
-                const gg = new THREE.PlaneGeometry(3.8, 0.7);
-                gg.rotateX(-Math.PI / 2);
-                gg.translate(x, WALL_H - 0.22, z);
-                lampGlowGeos.push(gg);
+                lampGlowMs.push(mat(x, WALL_H - 0.22, z, _qX90, 3.8, 1, 0.7));
             }
         }
 
-        // ---- 合并并加入场景（每个材质 1 次 draw call） ----
-        const add = (geos, mat, group, cast, recv) => {
-            if (geos.length === 0) return;
-            const mesh = new THREE.Mesh(this._merge(geos), mat);
-            mesh.castShadow = cast; mesh.receiveShadow = recv;
-            group.add(mesh);
-        };
-        add(floorGeos, this._getFloorMat(), this.mazeGroup, false, true);
-        add(ceilGeos, this.ceilMat, this.mazeGroup, false, true);
-        add(wallGeos, this.wallMat, this.mazeGroup, true, true);
-        add(skirtGeos, this.skirtMat, this.mazeGroup, false, true);
-        add(railGeos, this.railMat, this.mazeGroup, false, true);
-        add(lampFrameGeos, this.lampFrameMat, this.mazeGroup, false, false);
-        add(lampTubeGeos, this.lampTubeMat, this.mazeGroup, false, false);
-        add(lampGlowGeos, this.lampGlowMat, this.mazeGroup, false, false);
+        // 合并并加入场景（每种材质 1 次 draw call）
+        this._instanced(unitPlane, this._getFloorMat(), floorMs, this.mazeGroup, false, true);
+        if (ceilMs.length) this._instanced(unitPlane, this.ceilMat, ceilMs, this.mazeGroup, false, true);
+        this._instanced(unitBox, this.wallMat, wallMs, this.mazeGroup, true, true);
+        this._instanced(unitBox, this.skirtMat, skirtMs, this.mazeGroup, false, true);
+        this._instanced(unitBox, this.railMat, railMs, this.mazeGroup, false, true);
+        this._instanced(unitBox, this.lampFrameMat, lampFrameMs, this.mazeGroup, false, false);
+        this._instanced(unitBox, this.lampTubeMat, lampTubeMs, this.mazeGroup, false, false);
+        this._instanced(unitPlane, this.lampGlowMat, lampGlowMs, this.mazeGroup, false, false);
 
         // ---- 平台（数量少，独立 mesh） ----
         if (platforms && platforms.length) {
@@ -428,104 +451,235 @@ export class GameRenderer {
             }
         }
 
-        // ---- 建筑（合并主体与窗户） ----
+        // ---- 建筑（主体 + 窗户，各 1 个 InstancedMesh） ----
         if (buildings && buildings.length) {
             const bm = new THREE.MeshStandardMaterial({ color: 0x6e6e74, roughness: 0.85, metalness: 0.15 });
             const winMat = new THREE.MeshStandardMaterial({
                 color: 0x22242a, roughness: 0.2, metalness: 0.5,
                 emissive: 0x22242a, emissiveIntensity: 0.3
             });
-            const bGeos = [], wGeos = [];
+            const bMs = [], wMs = [];
             for (const b of buildings) {
-                const bg = new THREE.BoxGeometry(b.width - 1, b.height, b.depth - 1);
-                bg.translate(b.x, b.height / 2, b.z);
-                bGeos.push(bg);
+                bMs.push(mat(b.x, b.height / 2, b.z, _qId, b.width - 1, b.height, b.depth - 1));
                 const cols = Math.max(2, Math.floor(b.width / 4));
                 const rows = Math.max(2, Math.floor(b.height / 4));
                 for (let i = 0; i < cols; i++) {
                     for (let j = 0; j < rows; j++) {
-                        const win = new THREE.PlaneGeometry(1.2, 1.6);
-                        win.translate(
+                        wMs.push(mat(
                             b.x - b.width / 2 + 2 + i * (b.width - 4) / Math.max(1, cols - 1),
                             b.height / 2 - 3 - j * (b.height - 5) / Math.max(1, rows - 1),
-                            b.z + b.depth / 2 + 0.02
-                        );
-                        wGeos.push(win);
+                            b.z + b.depth / 2 + 0.02, _qId, 1.2, 1.6, 1
+                        ));
                     }
                 }
             }
-            add(bGeos, bm, this.buildingGroup, true, true);
-            add(wGeos, winMat, this.buildingGroup, false, false);
+            this._instanced(unitBox, bm, bMs, this.buildingGroup, true, true);
+            this._instanced(unitPlane, winMat, wMs, this.buildingGroup, false, false);
         }
 
-        // ---- 树木（合并树干与树冠） ----
+        // ---- 树木（树干/树冠各 1 个 InstancedMesh） ----
         if (trees && trees.length) {
             const tkm = new THREE.MeshStandardMaterial({ color: 0x4a3020, roughness: 0.95 });
             const crm = new THREE.MeshStandardMaterial({ color: 0x1f4a10, roughness: 0.9 });
-            const tkGeos = [], crGeos = [];
+            const tkMs = [], crMs = [];
             for (const t of trees) {
-                const tk = new THREE.CylinderGeometry(0.18, 0.32, t.height * 0.5, 6);
-                tk.translate(t.x, t.height * 0.25, t.z);
-                tkGeos.push(tk);
-                const cr = new THREE.SphereGeometry(t.height * 0.28, 6, 4);
-                cr.translate(t.x, t.height * 0.72, t.z);
-                crGeos.push(cr);
+                tkMs.push(mat(t.x, t.height * 0.25, t.z, _qId, 1, t.height * 0.5, 1));
+                crMs.push(mat(t.x, t.height * 0.72, t.z, _qId, t.height, t.height, t.height));
             }
-            add(tkGeos, tkm, this.treeGroup, true, false);
-            add(crGeos, crm, this.treeGroup, true, false);
+            this._instanced(unitTrunk, tkm, tkMs, this.treeGroup, true, false);
+            this._instanced(unitCrown, crm, crMs, this.treeGroup, true, false);
         }
 
-        // ---- 装饰物（柱子/货架/管道，合并） ----
+        // ---- 装饰物（柱子/货架/管道/家具） ----
         if (decorations && decorations.length) {
             const pillarMat = new THREE.MeshStandardMaterial({ color: 0x5a5548, roughness: 0.9 });
             const pipeMat = new THREE.MeshStandardMaterial({ color: 0x3a3a40, roughness: 0.5, metalness: 0.6 });
             const shelfMat = new THREE.MeshStandardMaterial({ color: 0x6a5a3a, roughness: 0.85 });
-            const pGeos = [], pipeGeos = [], shelfGeos = [], itemGeos = [];
+            const itemMat = new THREE.MeshStandardMaterial({ color: 0x7a6a4a, roughness: 0.9 });
+            const pMs = [], pipeMs = [], shelfMs = [], itemMs = [];
+            const single = []; // 独立网格的家具（数量少，直接 add）
             for (const d of decorations) {
                 if (d.type === 'pillar') {
-                    const pg = new THREE.CylinderGeometry(0.45, 0.55, WALL_H, 7);
-                    pg.translate(d.x, WALL_H / 2, d.z);
-                    pGeos.push(pg);
+                    pMs.push(mat(d.x, WALL_H / 2, d.z, _qId, 1, WALL_H, 1));
                 } else if (d.type === 'shelf') {
-                    const fr = new THREE.BoxGeometry(2.6, 2.4, 0.12);
-                    fr.translate(d.x, 1.2, d.z);
-                    shelfGeos.push(fr);
+                    shelfMs.push(mat(d.x, 1.2, d.z, _qId, 2.6, 2.4, 0.12));
                     for (let i = 0; i < 3; i++) {
-                        const bd = new THREE.BoxGeometry(2.6, 0.08, 1.0);
-                        bd.translate(d.x, 0.5 + i * 0.8, d.z);
-                        shelfGeos.push(bd);
+                        shelfMs.push(mat(d.x, 0.5 + i * 0.8, d.z, _qId, 2.6, 0.08, 1.0));
                     }
                     for (let i = 0; i < 3; i++) {
-                        const it = new THREE.BoxGeometry(0.35 + Math.random() * 0.4, 0.3 + Math.random() * 0.35, 0.35 + Math.random() * 0.4);
-                        it.translate(d.x - 0.9 + Math.random() * 1.8, 0.55 + Math.floor(Math.random() * 3) * 0.8 + 0.25, d.z);
-                        itemGeos.push(it);
+                        const w = 0.35 + Math.random() * 0.4, h = 0.3 + Math.random() * 0.35, dep = 0.35 + Math.random() * 0.4;
+                        itemMs.push(mat(d.x - 0.9 + Math.random() * 1.8, 0.55 + Math.floor(Math.random() * 3) * 0.8 + 0.25, d.z, _qId, w, h, dep));
                     }
                 } else if (d.type === 'pipe') {
-                    const pg = new THREE.CylinderGeometry(0.22, 0.22, 4, 7);
-                    pg.rotateX(Math.PI / 2);
-                    pg.translate(d.x, 2.6 + (d.z % 2) * 0.5, d.z);
-                    pipeGeos.push(pg);
+                    pipeMs.push(mat(d.x, 2.6 + (d.z % 2) * 0.5, d.z, _qX90, 1, 4, 1));
+                } else if (d.type === 'valve') {
+                    // 管道阀门：法兰环 + 手柄（挂在墙侧）
+                    const grp = new THREE.Group();
+                    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.08, 8, 14), this.metalMat);
+                    ring.position.y = 1.7;
+                    const handle = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 0.08), this.metalMat);
+                    handle.position.y = 1.7; handle.rotation.z = d.rot;
+                    grp.add(ring, handle);
+                    grp.position.set(d.x, 0, d.z);
+                    grp.rotation.y = d.rot;
+                    single.push(grp);
+                } else if (d.type === 'desk') {
+                    // 办公桌（f 版 Level 4 废弃办公室）
+                    const grp = new THREE.Group();
+                    const top = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.08, 0.85), this.woodMat);
+                    top.position.y = 0.78;
+                    const l = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.74, 0.7), this.woodDarkMat);
+                    l.position.set(-0.78, 0.4, 0);
+                    const r = l.clone(); r.position.x = 0.78;
+                    const back = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.6, 0.05), this.woodDarkMat);
+                    back.position.set(0, 0.5, -0.4);
+                    grp.add(top, l, r, back);
+                    grp.position.set(d.x, 0, d.z);
+                    grp.rotation.y = d.rot;
+                    single.push(grp);
+                } else if (d.type === 'chair') {
+                    const grp = new THREE.Group();
+                    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.06, 0.5), this.woodMat);
+                    seat.position.y = 0.45;
+                    const back = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.6, 0.06), this.woodMat);
+                    back.position.set(0, 0.75, -0.22);
+                    grp.add(seat, back);
+                    for (let i = 0; i < 4; i++) {
+                        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.42, 0.05), this.woodDarkMat);
+                        leg.position.set(i % 2 === 0 ? -0.2 : 0.2, 0.21, i < 2 ? 0.2 : -0.2);
+                        grp.add(leg);
+                    }
+                    grp.position.set(d.x, 0, d.z);
+                    grp.rotation.y = d.rot;
+                    single.push(grp);
+                } else if (d.type === 'bed') {
+                    // 床（f 版 Level 5 恐怖酒店）
+                    const grp = new THREE.Group();
+                    const frame = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.3, 1.2), this.woodDarkMat);
+                    frame.position.y = 0.15;
+                    const mattress = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.22, 1.1), this.fabricLightMat);
+                    mattress.position.y = 0.4;
+                    const headboard = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.8, 0.12), this.woodDarkMat);
+                    headboard.position.set(0, 0.5, -0.58);
+                    const blanket = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.1, 0.7), this.fabricMat);
+                    blanket.position.set(0, 0.55, 0.2);
+                    grp.add(frame, mattress, headboard, blanket);
+                    grp.position.set(d.x, 0, d.z);
+                    grp.rotation.y = d.rot;
+                    single.push(grp);
+                } else if (d.type === 'locker') {
+                    // 储物柜
+                    const grp = new THREE.Group();
+                    const body = new THREE.Mesh(new THREE.BoxGeometry(0.9, 2.0, 0.6), this.metalMat);
+                    body.position.y = 1.0;
+                    const seam = new THREE.Mesh(new THREE.BoxGeometry(0.02, 1.9, 0.62), new THREE.MeshStandardMaterial({ color: 0x2a2a2e, roughness: 0.4, metalness: 0.6 }));
+                    seam.position.set(0, 1.0, 0);
+                    grp.add(body, seam);
+                    grp.position.set(d.x, 0, d.z);
+                    grp.rotation.y = d.rot;
+                    single.push(grp);
+                } else if (d.type === 'cratepile') {
+                    // 板条箱堆（f 版 Level 1 宜居区：堆满板条箱）
+                    const grp = new THREE.Group();
+                    const n = 2 + Math.floor(Math.random() * 2);
+                    for (let i = 0; i < n; i++) {
+                        const cr = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.9, 1.0), this.crateMat);
+                        cr.position.set((i % 2 === 0 ? -0.5 : 0.5), 0.45 + (i % n === 0 ? 0 : 0.9), (i % 3 === 0 ? 0.3 : -0.2));
+                        grp.add(cr);
+                    }
+                    grp.position.set(d.x, 0, d.z);
+                    grp.rotation.y = d.rot;
+                    single.push(grp);
                 }
             }
-            add(pGeos, pillarMat, this.decoGroup, true, false);
-            add(pipeGeos, pipeMat, this.decoGroup, true, false);
-            add(shelfGeos, shelfMat, this.decoGroup, true, false);
-            add(itemGeos, new THREE.MeshStandardMaterial({ color: 0x7a6a4a, roughness: 0.9 }), this.decoGroup, false, false);
+            this._instanced(unitPillar, pillarMat, pMs, this.decoGroup, true, false);
+            this._instanced(unitPipe, pipeMat, pipeMs, this.decoGroup, true, false);
+            this._instanced(unitBox, shelfMat, shelfMs, this.decoGroup, true, false);
+            this._instanced(unitBox, itemMat, itemMs, this.decoGroup, false, false);
+            for (const o of single) {
+                o.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
+                this.decoGroup.add(o);
+            }
         }
 
-        // ---- 出口 ----
-        if (exitPos) {
+        // ---- 层级特色装饰（f 版设定） ----
+        // Level 399 霓虹深渊：街道上方霓虹灯条
+        if (this.config && this.config.id === 399) {
+            const neonColors = [0xff2d78, 0x00e5ff, 0xaa66ff, 0xffaa00];
+            const neonMat = [];
+            for (const nc of neonColors) {
+                neonMat.push(new THREE.MeshBasicMaterial({ color: nc, transparent: true, opacity: 0.9 }));
+            }
+            const neonMs = [];
+            for (let i = 0; i < 60; i++) {
+                const nx = (Math.random() - 0.5) * 130;
+                const nz = (Math.random() - 0.5) * 130;
+                const horiz = Math.random() < 0.5;
+                const len = 4 + Math.random() * 10;
+                const q = horiz ? new THREE.Quaternion() : new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI / 2, 0));
+                neonMs.push(mat(nx, 2.2 + Math.random() * 1.6, nz, q, len, 0.07, 0.07));
+            }
+            // 每条霓虹灯独立材质颜色 → 分色 InstancedMesh
+            for (let c = 0; c < neonColors.length; c++) {
+                const ms = neonMs.filter((_, i) => i % neonColors.length === c);
+                this._instanced(unitBox, neonMat[c], ms, this.decoGroup, false, false);
+            }
+        }
+        // Level 37 泳池房：瓷砖水面地板
+        if (this.config && this.config.id === 37) {
+            const waterMat = new THREE.MeshStandardMaterial({
+                color: 0x2a6a8a, roughness: 0.05, metalness: 0.4,
+                transparent: true, opacity: 0.85
+            });
+            const wm = [];
+            for (let x = 0; x < W; x++) {
+                for (let y = 0; y < H; y++) {
+                    wm.push(mat(x * CELL_S, 0.03, y * CELL_S, _qX90, CELL_S, 1, CELL_S));
+                }
+            }
+            this._instanced(unitPlane, waterMat, wm, this.decoGroup, false, true);
+        }
+
+        // ---- 出口：门框 + 光幕（多出口） ----
+        const exits = mazeData.exits && mazeData.exits.length ? mazeData.exits : (exitPos ? [{ x: exitPos.x, z: exitPos.z, hidden: false }] : []);
+        for (const ex of exits) {
+            const grp = new THREE.Group();
+            const doorMat = new THREE.MeshStandardMaterial({ color: 0x2e2e2e, roughness: 0.6, metalness: 0.4 });
+            const postL = new THREE.Mesh(new THREE.BoxGeometry(0.22, 2.7, 0.22), doorMat);
+            postL.position.set(-1.1, 1.35, 0);
+            const postR = postL.clone(); postR.position.x = 1.1;
+            const lintel = new THREE.Mesh(new THREE.BoxGeometry(2.42, 0.22, 0.22), doorMat);
+            lintel.position.set(0, 2.7, 0);
+            grp.add(postL, postR, lintel);
+            // 光幕
+            const glowMat = new THREE.MeshBasicMaterial({
+                color: ex.hidden ? 0x60ff60 : 0x40ff40,
+                transparent: true, opacity: ex.hidden ? 0.12 : 0.3,
+                blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide
+            });
+            const veil = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 2.3), glowMat);
+            veil.position.y = 1.35;
+            grp.add(veil);
+            // 光柱（主出口明显）
+            if (!ex.hidden) {
+                const beam = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.3, 0.3, 4, 8, 1, true),
+                    new THREE.MeshBasicMaterial({ color: 0x40ff40, transparent: true, opacity: 0.15, blending: THREE.AdditiveBlending, depthWrite: false })
+                );
+                beam.position.y = 2.1;
+                grp.add(beam);
+            }
+            grp.position.set(ex.x, 0, ex.z);
+            grp.name = 'exitDoor' + (ex.hidden ? '-hidden' : '');
+            this.mazeGroup.add(grp);
+        }
+        // 兼容旧字段：单独的 exitPos 标记块（不再需要，但保留旧场景引用安全）
+        if (exitPos && (!mazeData.exits || mazeData.exits.length === 0)) {
             const em = new THREE.MeshStandardMaterial({ color: 0x40ff40, emissive: 0x22aa22, roughness: 0.3 });
             const exit = new THREE.Mesh(new THREE.BoxGeometry(1, 0.2, 1), em);
             exit.position.set(exitPos.x, 0.15, exitPos.z);
             exit.name = 'exitMarker';
             this.mazeGroup.add(exit);
-            const beam = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.35, 0.35, 4, 8, 1, true),
-                new THREE.MeshBasicMaterial({ color: 0x40ff40, transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending, depthWrite: false })
-            );
-            beam.position.set(exitPos.x, 2.1, exitPos.z);
-            this.mazeGroup.add(beam);
         }
     }
 
@@ -557,11 +711,11 @@ export class GameRenderer {
             this.flashCone.quaternion.copy(player.camera.quaternion);
             const flicker = this.config && this.config.renderFlags && this.config.renderFlags.includes(MazeRenderFlags.FLICKERING_LIGHTS);
             if (flicker) {
-                this.flashlight.intensity = Math.sin(flickerTime * 15) * 0.5 + 2.5;
+                this.flashlight.intensity = Math.sin(flickerTime * 15) * 0.5 + 3.2;
                 this.flashCone.material.opacity = 0.05 + Math.sin(flickerTime * 19) * 0.03;
             } else {
-                this.flashlight.intensity = 5;
-                this.flashCone.material.opacity = 0.08;
+                this.flashlight.intensity = 6.5;
+                this.flashCone.material.opacity = 0.1;
             }
         }
 
@@ -586,7 +740,7 @@ export class GameRenderer {
 
         switch (type) {
             case 'smiler': {
-                // 微笑者：黑暗中苍白的发光面孔
+                // 微笑者：黑暗中苍白的发光面孔（f 版设定）
                 const head = new THREE.Mesh(new THREE.SphereGeometry(0.42, 18, 14), new THREE.MeshStandardMaterial({
                     map: this.texSmile, roughness: 0.55, emissive: 0xffffff, emissiveIntensity: 0.5,
                     emissiveMap: this.texSmile
@@ -596,7 +750,7 @@ export class GameRenderer {
                 break;
             }
             case 'hound': {
-                // 猎犬：黑色四足怪物（设定）
+                // 猎犬：黑色四足怪物（f 版设定）
                 const body = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.5, 0.55), mat);
                 body.position.y = 0.55; body.castShadow = true;
                 const head = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.3, 0.4), mat);

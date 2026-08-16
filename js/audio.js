@@ -71,7 +71,19 @@ export class AudioManager {
         g.gain.value = 0.03;
         o.connect(f); f.connect(g); g.connect(this.master);
         o.start();
-        this.ambient = { osc: o, gain: g, filter: f };
+
+        // 荧光灯电流嗡声（f 版设定：荧光灯嗡嗡作响）
+        const hum = this.ctx.createOscillator();
+        const humG = this.ctx.createGain();
+        const humF = this.ctx.createBiquadFilter();
+        hum.type = 'square';
+        hum.frequency.value = 120;
+        humF.type = 'lowpass'; humF.frequency.value = 300;
+        humG.gain.value = 0.012;
+        hum.connect(humF); humF.connect(humG); humG.connect(this.master);
+        hum.start();
+
+        this.ambient = { osc: o, gain: g, filter: f, hum, humG };
         this._modAmbient();
     }
 
@@ -80,12 +92,16 @@ export class AudioManager {
         const t = this.ctx.currentTime;
         this.ambient.osc.frequency.linearRampToValueAtTime(40 + Math.random() * 30, t + 2 + Math.random() * 3);
         this.ambient.gain.gain.linearRampToValueAtTime(0.02 + Math.random() * 0.04, t + 2 + Math.random() * 3);
+        // 嗡声轻微波动
+        if (this.ambient.humG) {
+            this.ambient.humG.gain.linearRampToValueAtTime(0.008 + Math.random() * 0.01, t + 1.5);
+        }
         setTimeout(() => this._modAmbient(), 3000);
     }
 
     stopAmbient() {
         if (this.ambient) {
-            try { this.ambient.osc.stop(); } catch (e) {}
+            try { this.ambient.osc.stop(); this.ambient.hum.stop(); } catch (e) {}
             this.ambient = null;
         }
     }

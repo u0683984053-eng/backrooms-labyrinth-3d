@@ -123,6 +123,7 @@ class BackroomsGame {
         this.player.position.copy(this.mazeData.startPos);
         this.player.position.y = this.player.height;
         this.renderer.camera.position.copy(this.player.position);
+        this._faceOpenDirection();
 
         this.entityManager.spawnEntities(this.mazeData.entitySpawns);
         this.audio.stopAmbient();
@@ -133,6 +134,32 @@ class BackroomsGame {
         this.player.flashlightOn = false;
         this._showTransition(config.name, config.description);
         this._refreshInventory();
+    }
+
+    // 出生时面朝最开阔的方向（避免开局贴墙）
+    _faceOpenDirection() {
+        if (!this.mazeData || !this.mazeData.grid) return;
+        const grid = this.mazeData.grid;
+        const cx = Math.floor(this.player.position.x / 5);
+        const cz = Math.floor(this.player.position.z / 5);
+        const dirs = [
+            { dx: 0, dy: -1, wi: 0, yaw: 0 },
+            { dx: 1, dy: 0, wi: 1, yaw: -Math.PI / 2 },
+            { dx: 0, dy: 1, wi: 2, yaw: Math.PI },
+            { dx: -1, dy: 0, wi: 3, yaw: Math.PI / 2 },
+        ];
+        let best = dirs[0], bestLen = -1;
+        for (const d of dirs) {
+            let x = cx, z = cz, len = 0;
+            for (let i = 0; i < 8; i++) {
+                if (grid[x][z].walls[d.wi]) break;
+                x += d.dx; z += d.dy; len++;
+                if (x < 0 || x >= grid.length || z < 0 || z >= grid[0].length) break;
+            }
+            if (len > bestLen) { bestLen = len; best = d; }
+        }
+        this.player.yaw = best.yaw;
+        this.renderer.camera.quaternion.setFromEuler(new THREE.Euler(this.player.pitch, this.player.yaw, 0, 'YXZ'));
     }
 
     _showTransition(name, desc) {
@@ -177,13 +204,20 @@ class BackroomsGame {
     }
 
     _checkExit() {
-        if (!this.mazeData || !this.mazeData.exitPos) return;
-        const d = this.player.position.distanceTo(
-            new THREE.Vector3(this.mazeData.exitPos.x, this.player.position.y, this.mazeData.exitPos.z)
-        );
-        if (d < 2 && this.currentLevel < 1000) {
-            this.audio.playTransition();
-            this._loadLevel(this.currentLevel + 1);
+        if (!this.mazeData) return;
+        const exits = (this.mazeData.exits && this.mazeData.exits.length)
+            ? this.mazeData.exits
+            : (this.mazeData.exitPos ? [{ x: this.mazeData.exitPos.x, z: this.mazeData.exitPos.z }] : []);
+        if (exits.length === 0) return;
+        for (const ex of exits) {
+            const d = this.player.position.distanceTo(
+                new THREE.Vector3(ex.x, this.player.position.y, ex.z)
+            );
+            if (d < 2 && this.currentLevel < 1000) {
+                this.audio.playTransition();
+                this._loadLevel(this.currentLevel + 1);
+                return;
+            }
         }
     }
 
