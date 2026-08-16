@@ -874,6 +874,34 @@ export class GameRenderer {
                     grp.position.set(d.x, 0, d.z);
                     grp.rotation.y = d.rot;
                     single.push(grp);
+                } else if (d.type === 'vending') {
+                    // Level 1 自动售货机：金属柜 + 玻璃门 + 发光商品
+                    const grp = new THREE.Group();
+                    const body = new THREE.Mesh(new THREE.BoxGeometry(1.3, 2.1, 0.8), new THREE.MeshStandardMaterial({
+                        color: 0x9a3030, roughness: 0.6, metalness: 0.3
+                    }));
+                    body.position.y = 1.05;
+                    const glass = new THREE.Mesh(new THREE.BoxGeometry(1.05, 1.5, 0.04), new THREE.MeshStandardMaterial({
+                        color: 0xcfe8ff, roughness: 0.1, metalness: 0.1, transparent: true, opacity: 0.6
+                    }));
+                    glass.position.set(0, 1.3, 0.41);
+                    // 内部发光（商品光）
+                    const glow = new THREE.Mesh(new THREE.PlaneGeometry(0.95, 1.4), new THREE.MeshBasicMaterial({
+                        color: 0x88ddff, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false
+                    }));
+                    glow.position.set(0, 1.3, 0.42);
+                    // 商品色块
+                    for (let i = 0; i < 6; i++) {
+                        const item = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.16, 0.05), new THREE.MeshStandardMaterial({
+                            color: [0xff6060, 0x60ff60, 0x6060ff, 0xffff60, 0xff60ff, 0x60ffff][i], roughness: 0.7
+                        }));
+                        item.position.set(-0.35 + (i % 3) * 0.35, 1.75 - Math.floor(i / 3) * 0.5, 0.42);
+                        grp.add(item);
+                    }
+                    grp.add(body, glass, glow);
+                    grp.position.set(d.x, 0, d.z);
+                    grp.rotation.y = d.rot;
+                    single.push(grp);
                 } else if (d.type === 'blackboard') {
                     // Level 52「学校」：教室黑板
                     const grp = new THREE.Group();

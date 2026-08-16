@@ -193,6 +193,21 @@ export class MazeGenerator {
                     rot: Math.floor(Math.random() * 4) * (Math.PI / 2)
                 });
             }
+        } else if (this.config.id === 1) {
+            // Level 1「宜居区」：自动售货机（f 版：补给丰富的仓库层）
+            let placed = 0;
+            for (let t2 = 0; t2 < 50 && placed < 4; t2++) {
+                const ex = 2 + Math.floor(Math.random() * (this.width - 4));
+                const ey = 2 + Math.floor(Math.random() * (this.height - 4));
+                if (this._cellBlocked(ex, ey, 0)) continue;
+                this.decorations.push({
+                    type: 'vending',
+                    x: ex * this.cellSize,
+                    z: ey * this.cellSize,
+                    rot: Math.floor(Math.random() * 4) * (Math.PI / 2)
+                });
+                placed++;
+            }
         } else if (this.config.id === 11) {
             // Level 11「无尽城市」：街道路灯（夜晚亮起）
             for (let i = 0; i < 16; i++) {

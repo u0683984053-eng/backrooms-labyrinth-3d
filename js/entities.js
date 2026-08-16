@@ -99,6 +99,11 @@ export class EntityManager {
                     e.chaseTimer += dt;
                     if (e.chaseTimer > e.maxChaseDur) { e.state = 'idle'; break; }
                     e.target.copy(player.position);
+                    // f 版设定：派对客的追逐诡异而有节奏（追一会儿、停一会儿）
+                    if (e.type === 'partygoer') {
+                        e.weirdT = (e.weirdT || 0) + dt;
+                        if (e.weirdT % 6.5 < 1.5) break; // 站在原地"邀请"你
+                    }
                     this._moveTo(e, player.position, e.speed * 1.2 * dt * 10);
                     if (dist < 1.5) { e.state = 'attack'; e.attackCd = 0; }
                     break;
