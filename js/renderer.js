@@ -346,8 +346,44 @@ export class GameRenderer {
 
         const ds = flags.includes(MazeRenderFlags.DOUBLE_SIDED);
         const wf = flags.includes(MazeRenderFlags.WIREFRAME);
-        this.wallMat.side = ds ? THREE.DoubleSide : THREE.FrontSide;
-        this.wallMat.wireframe = wf;
+        // Level 37 泳池房：瓷砖墙面材质（f 版设定：无尽的瓷砖泳池房）
+        if (config.id === 37) {
+            if (!this.tileWallMat) {
+                const c = makeCanvas(128, 128);
+                const g = c.getContext('2d');
+                g.fillStyle = '#d8dcd8';
+                g.fillRect(0, 0, 128, 128);
+                g.strokeStyle = 'rgba(60,120,150,0.55)';
+                g.lineWidth = 4;
+                for (let x = 0; x <= 128; x += 32) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, 128); g.stroke(); }
+                for (let y = 0; y <= 128; y += 32) { g.beginPath(); g.moveTo(0, y); g.lineTo(128, y); g.stroke(); }
+                this.tileWallMat = new THREE.MeshStandardMaterial({ map: finishTexture(new THREE.CanvasTexture(c), true), roughness: 0.25, metalness: 0.1 });
+            }
+            this.wallMat = this.tileWallMat;
+        } else {
+            this.wallMat.side = ds ? THREE.DoubleSide : THREE.FrontSide;
+            this.wallMat.wireframe = wf;
+        }
+
+        // Level 7 深海气泡粒子（f 版设定：深海恐惧）
+        if (!this.bubblePoints) {
+            const N = 140;
+            const pos = new Float32Array(N * 3);
+            for (let i = 0; i < N; i++) {
+                pos[i * 3] = (Math.random() - 0.5) * 150;
+                pos[i * 3 + 1] = Math.random() * 3.5;
+                pos[i * 3 + 2] = (Math.random() - 0.5) * 150;
+            }
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            this.bubblePoints = new THREE.Points(geo, new THREE.PointsMaterial({
+                color: 0x88ccee, size: 0.06, transparent: true, opacity: 0.4,
+                depthWrite: false, sizeAttenuation: true
+            }));
+            this.bubblePoints.frustumCulled = false;
+            this.scene.add(this.bubblePoints);
+        }
+        this.bubblePoints.visible = config.id === 7;
         this.floorMat.side = ds ? THREE.DoubleSide : THREE.FrontSide;
         this.floorMat.wireframe = wf;
         this.ceilMat.side = ds ? THREE.DoubleSide : THREE.FrontSide;
@@ -358,6 +394,18 @@ export class GameRenderer {
 
         // 尘埃粒子：室内层级可见
         if (this.dustPoints) this.dustPoints.visible = !this._outdoor && !dark;
+
+        // f 版设定：Level 6「熄灭」偶发微弱蓝光（黑暗中的幻觉）
+        if (!this.blueGlow) {
+            this.blueGlow = new THREE.Mesh(new THREE.SphereGeometry(1.2, 10, 8), new THREE.MeshBasicMaterial({
+                color: 0x4488ff, transparent: true, opacity: 0,
+                blending: THREE.AdditiveBlending, depthWrite: false
+            }));
+            this.blueGlow.frustumCulled = false;
+            this.scene.add(this.blueGlow);
+        }
+        this.blueGlowTimer = config.id === 6 ? 60 : -1;
+        this.blueGlow.material.opacity = 0;
     }
 
     // ---- InstancedMesh 辅助：同材质几何体 1 次 draw call ----
@@ -890,6 +938,19 @@ export class GameRenderer {
                 grp.userData.pickup = true;
                 grp.userData.pickupType = pk.type;
                 this.mazeGroup.add(grp);
+                if (pk.type === 'meg_doc') {
+                    // M.E.G. 遗落文档：泛黄纸片 + 微光
+                    grp.clear();
+                    const paper = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.4), new THREE.MeshStandardMaterial({
+                        color: 0xe8dcb0, roughness: 0.9, side: THREE.DoubleSide
+                    }));
+                    paper.position.y = 0.25;
+                    const paperGlow = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 6), new THREE.MeshBasicMaterial({
+                        color: 0x88bbff, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false
+                    }));
+                    paperGlow.position.y = 0.25;
+                    grp.add(paper, paperGlow);
+                }
             }
         }
 
@@ -1142,6 +1203,39 @@ export class GameRenderer {
                 pos.setY(i, y);
             }
             pos.needsUpdate = true;
+        }
+        // Level 7 气泡上升
+        if (this.bubblePoints && this.bubblePoints.visible) {
+            const pos = this.bubblePoints.geometry.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+                let y = pos.getY(i) + 0.025;
+                if (y > 3.6) y = 0.1;
+                pos.setY(i, y);
+            }
+            pos.needsUpdate = true;
+        }
+        // Level 6「熄灭」偶发蓝光（f 版设定：黑暗中的诡异闪光）
+        if (this.blueGlow && this.blueGlowTimer >= 0) {
+            this.blueGlowTimer -= 1;
+            if (this.blueGlowTimer <= 0) {
+                if (this._bluePhase) {
+                    this.blueGlow.material.opacity = 0;
+                    this.blueGlowTimer = 240 + Math.floor(Math.random() * 300); // 4~9 秒后再次
+                    this._bluePhase = false;
+                } else {
+                    const a = Math.random() * Math.PI * 2;
+                    const d = 8 + Math.random() * 14;
+                    this.blueGlow.position.set(
+                        this.camera.position.x + Math.cos(a) * d,
+                        1.2 + Math.random() * 2.2,
+                        this.camera.position.z + Math.sin(a) * d
+                    );
+                    this.blueGlowTimer = 24;
+                    this._bluePhase = true;
+                }
+            } else if (this._bluePhase) {
+                this.blueGlow.material.opacity = 0.32 * (this.blueGlowTimer / 24);
+            }
         }
         this.renderer.render(this.scene, this.camera);
     }

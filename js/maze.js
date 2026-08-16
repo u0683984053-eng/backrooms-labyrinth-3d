@@ -99,10 +99,17 @@ export class MazeGenerator {
             return 'cashew_water';
         };
         let placed = 0;
+        // f 版设定：偶遇 M.E.G. 遗落的文档
+        const doc = Math.random() < 0.25;
         for (let t = 0; t < 100 && placed < n; t++) {
             const ex = 2 + Math.floor(Math.random() * (this.width - 4));
             const ey = 2 + Math.floor(Math.random() * (this.height - 4));
             if (this._cellBlocked(ex, ey, 0)) continue;
+            if (doc && placed === 0) {
+                this.pickups.push({ type: 'meg_doc', x: ex * this.cellSize, z: ey * this.cellSize });
+                placed++;
+                continue;
+            }
             this.pickups.push({
                 type: roll(),
                 x: ex * this.cellSize + (Math.random() - 0.5) * 2,

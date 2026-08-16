@@ -409,6 +409,23 @@ class BackroomsGame {
     }
 
     _collectPickup(pk) {
+        // f 版设定：M.E.G. 遗落文档 → 阅读档案（不入背包）
+        if (pk.type === 'meg_doc') {
+            const DOCS = [
+                'M.E.G. 档案 #001：「如果你不小心，在错误的地方切出现实，你就会进入后室。那里只有潮湿地毯的臭味，疯狂吞噬着你的理智……」',
+                'M.E.G. 档案 #002：「杏仁水是从后室中提取的流体，能恢复理智。注意：腰果水与它截然相反——千万别喝错。」',
+                'M.E.G. 档案 #007：「猎犬是四足的捕食者，会发出类似犬吠的叫声。听到吠叫，跑。」',
+                'M.E.G. 档案 #011：「微笑者只在黑暗中显形。如果黑暗中有一张苍白的笑脸在凝视你——不要与它对视。」',
+                'M.E.G. 档案 #018：「派对客会邀请你参加派对。拒绝。永远拒绝。」',
+                'M.E.G. 档案 #023：「火盐是少数能伤害实体的物质。流浪者总是随身携带。」',
+                'M.E.G. 档案 #031：「Level 0 的出口被称为卡出。有人说，只要贴着墙壁行走并相信，就能穿过现实。」',
+            ];
+            const text = DOCS[Math.floor(Math.random() * DOCS.length)];
+            this._showMegDoc(text);
+            this._removePickupMesh(pk);
+            this.mazeData.pickups = this.mazeData.pickups.filter(p => p !== pk);
+            return;
+        }
         const defs = {
             almond_water: {
                 id: 'almond_water', name: '杏仁水', icon: '💧', type: 'consumable',
@@ -435,13 +452,28 @@ class BackroomsGame {
         const added = this.inventory.addItem({ ...itemDef });
         if (!added) return;
         this.mazeData.pickups = this.mazeData.pickups.filter(p => p !== pk);
+        this._removePickupMesh(pk);
+        this.audio.playCollect();
+        this._refreshInventory();
+    }
+
+    _removePickupMesh(pk) {
         for (const c of this.renderer.mazeGroup.children) {
             if (c.userData && c.userData.pickup && Math.abs(c.position.x - pk.x) < 0.5 && Math.abs(c.position.z - pk.z) < 0.5) {
                 this.renderer.mazeGroup.remove(c);
             }
         }
+    }
+
+    // M.E.G. 文档展示
+    _showMegDoc(text) {
+        const ov = document.getElementById('meg-doc-overlay');
+        if (!ov) return;
+        document.getElementById('meg-doc-text').textContent = text;
+        ov.classList.remove('hidden');
         this.audio.playCollect();
-        this._refreshInventory();
+        clearTimeout(this._docTimer);
+        this._docTimer = setTimeout(() => ov.classList.add('hidden'), 4200);
     }
 
     // 卡出（noclip）：随机传送到邻近层级（f 版设定：Level 0 主要出口方式）

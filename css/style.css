@@ -389,6 +389,45 @@ body {
     background: rgba(20,16,4,0.6);
 }
 
+/* M.E.G. 遗落文档 */
+#meg-doc-overlay {
+    background: rgba(0,0,0,0.75);
+    z-index: 120;
+}
+.meg-doc-paper {
+    background: #d8cc9a;
+    color: #3a3020;
+    max-width: 560px;
+    width: 85%;
+    padding: 30px 36px;
+    position: relative;
+    box-shadow: 0 0 40px rgba(180,150,60,0.35);
+    border: 1px solid #a09060;
+    font-family: "KaiTi", "楷体", "Microsoft YaHei", serif;
+}
+.meg-doc-paper h2 {
+    text-align: center;
+    font-size: 1.1rem;
+    letter-spacing: 0.2em;
+    margin-bottom: 18px;
+    color: #5a4020;
+}
+#meg-doc-text {
+    font-size: 0.95rem;
+    line-height: 1.9;
+    text-indent: 2em;
+}
+.meg-doc-stamp {
+    display: block;
+    text-align: center;
+    margin-top: 22px;
+    font-size: 0.7rem;
+    letter-spacing: 0.3em;
+    color: rgba(90,60,20,0.6);
+    border-top: 1px dashed rgba(90,60,20,0.4);
+    padding-top: 10px;
+}
+
 /* 通关画面 */
 #ending-screen { background: radial-gradient(ellipse at center, rgba(40,30,5,0.95), rgba(5,5,0,0.98)); }
 .ending-content { text-align: center; padding: 60px; }
