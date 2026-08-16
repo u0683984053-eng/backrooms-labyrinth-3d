@@ -66,6 +66,24 @@ class BackroomsGame {
         document.getElementById('btn-close-cheat').addEventListener('click', () => this.toggleCheat(false));
         document.getElementById('btn-cheat-go').addEventListener('click', () => this._cheatGo());
         this.input.on('keydown', e => this._onKeyDown(e));
+
+        // 鼠标灵敏度设置（localStorage 记忆）
+        const sens = document.getElementById('sens-input');
+        const sensVal = document.getElementById('sens-value');
+        if (sens && sensVal) {
+            try {
+                const saved = parseInt(localStorage.getItem('backrooms3d_sens') || '7', 10);
+                sens.value = saved;
+                sensVal.textContent = saved;
+                this.input.sensitivity = saved / 7 * 0.002;
+            } catch (e) {}
+            sens.addEventListener('input', () => {
+                const v = parseInt(sens.value, 10);
+                sensVal.textContent = v;
+                this.input.sensitivity = v / 7 * 0.002;
+                try { localStorage.setItem('backrooms3d_sens', String(v)); } catch (e) {}
+            });
+        }
     }
 
     _onKeyDown(e) {
@@ -149,6 +167,15 @@ class BackroomsGame {
         this.currentDark = flags.includes(MazeRenderFlags.DARKNESS);
         this.failLightTimer = 0;
         this.currentTerrain = config.terrainType;
+
+        // f 版设定：Level 2「管道之梦」极其炎热（43°C+）→ 持续消耗理智
+        this.player.statusEffects = [];
+        if (id === 2) {
+            this.player.sanityDrain = 0.6;
+            this.player.addStatusEffect({ name: '酷热 43°C', color: '#ff6020', duration: Infinity });
+        } else if (flags.includes(MazeRenderFlags.BIOHAZARD)) {
+            this.player.addStatusEffect({ name: '毒气', color: '#40c040', duration: Infinity });
+        }
 
         // Level 404：故障效果（f 版设定：损坏的现实）
         const gl = document.getElementById('glitch-overlay');

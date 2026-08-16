@@ -98,6 +98,27 @@ body {
     letter-spacing: 0.05em;
 }
 
+/* 灵敏度设置 */
+.sens-row {
+    margin-top: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: #777;
+    font-size: 0.8rem;
+}
+.sens-label { letter-spacing: 0.1em; }
+#sens-input {
+    width: 160px;
+    accent-color: #c8c860;
+    cursor: pointer;
+}
+#sens-value {
+    color: #c8c860;
+    min-width: 1.2em;
+}
+
 /* 按钮 */
 .btn-primary {
     background: #2a2a0a;
