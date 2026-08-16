@@ -50,6 +50,8 @@ class BackroomsGame {
                 clearInterval(iv);
                 document.getElementById('loading-screen').classList.add('hidden');
                 document.getElementById('start-screen').classList.remove('hidden');
+                const btn = document.getElementById('btn-start');
+                if (btn && this.hasSave()) btn.textContent = '继 续 探 索';
             }
             bar.style.width = p + '%';
             txt.textContent = '加载中... ' + Math.floor(p) + '%';
@@ -57,8 +59,9 @@ class BackroomsGame {
     }
 
     _setupUI() {
-        document.getElementById('btn-start').addEventListener('click', () => this.startGame());
+        document.getElementById('btn-start').addEventListener('click', () => this.startGame(this.hasSave()));
         document.getElementById('btn-respawn').addEventListener('click', () => this.respawn());
+        document.getElementById('btn-ending-restart').addEventListener('click', () => this._restartGame());
         document.getElementById('btn-close-backpack').addEventListener('click', () => this.toggleBackpack(false));
         document.getElementById('btn-close-cheat').addEventListener('click', () => this.toggleCheat(false));
         document.getElementById('btn-cheat-go').addEventListener('click', () => this._cheatGo());
@@ -111,11 +114,15 @@ class BackroomsGame {
         }
     }
 
-    startGame() {
+    startGame(continueGame) {
         document.getElementById('start-screen').classList.add('hidden');
         document.getElementById('hud').classList.remove('hidden');
         this.isRunning = true;
-        this._loadLevel(0);
+        if (continueGame && this._loadProgress()) {
+            // 已从存档恢复
+        } else {
+            this._loadLevel(0);
+        }
         this.input.requestLock();
         this.prevTime = performance.now();
         this._loop(performance.now());
@@ -156,6 +163,47 @@ class BackroomsGame {
         this.player.flashlightOn = false;
         this._showTransition(config.name, config.description);
         this._refreshInventory();
+        this._saveProgress();
+    }
+
+    // ---- 进度存档（localStorage） ----
+    _saveProgress() {
+        try {
+            localStorage.setItem('backrooms3d_save', JSON.stringify({
+                level: this.currentLevel,
+                health: Math.round(this.player.health),
+                stamina: Math.round(this.player.stamina),
+                sanity: Math.round(this.player.sanity),
+                inventory: this.inventory.getItems()
+            }));
+        } catch (e) { /* 隐私模式等场景下忽略 */ }
+    }
+
+    hasSave() {
+        try { return !!localStorage.getItem('backrooms3d_save'); } catch (e) { return false; }
+    }
+
+    _loadProgress() {
+        try {
+            const raw = localStorage.getItem('backrooms3d_save');
+            if (!raw) return false;
+            const s = JSON.parse(raw);
+            if (typeof s.level !== 'number') return false;
+            this._loadLevel(Math.max(0, Math.min(1000, s.level)));
+            if (typeof s.health === 'number') this.player.health = s.health;
+            if (typeof s.stamina === 'number') this.player.stamina = s.stamina;
+            if (typeof s.sanity === 'number') this.player.sanity = s.sanity;
+            if (Array.isArray(s.inventory)) {
+                this.inventory.items = s.inventory;
+                this.inventory.selectedIndex = -1;
+                this._refreshInventory();
+            }
+            return true;
+        } catch (e) { return false; }
+    }
+
+    _clearSave() {
+        try { localStorage.removeItem('backrooms3d_save'); } catch (e) {}
     }
 
     // 出生时面朝最开阔的方向（避免开局贴墙）
@@ -341,6 +389,30 @@ class BackroomsGame {
     }
 
     // 卡出（noclip）：随机传送到邻近层级（f 版设定：Level 0 主要出口方式）
+    // 通关（Level 1000 终点）
+    _onWin() {
+        this._clearSave();
+        this.isRunning = false;
+        this.input.releaseLock();
+        this.audio.stopAmbient();
+        this.audio.playTransition();
+        document.getElementById('hud').classList.add('hidden');
+        document.getElementById('ending-screen').classList.remove('hidden');
+    }
+
+    _restartGame() {
+        this._clearSave();
+        document.getElementById('ending-screen').classList.add('hidden');
+        document.getElementById('death-screen').classList.add('hidden');
+        document.getElementById('hud').classList.remove('hidden');
+        this.isRunning = true;
+        this._dead = false;
+        this._loadLevel(0);
+        this.input.requestLock();
+        this.prevTime = performance.now();
+        this._loop(performance.now());
+    }
+
     _noclip() {
         this.audio.playNoclip();
         const delta = 5 + Math.floor(Math.random() * 26);
@@ -363,7 +435,8 @@ class BackroomsGame {
             const d = this.player.position.distanceTo(
                 new THREE.Vector3(ex.x, this.player.position.y, ex.z)
             );
-            if (d < 2 && this.currentLevel < 1000) {
+            if (d < 2) {
+                if (this.currentLevel >= 1000) { this._onWin(); return; }
                 this.audio.playTransition();
                 this._loadLevel(this.currentLevel + 1);
                 return;

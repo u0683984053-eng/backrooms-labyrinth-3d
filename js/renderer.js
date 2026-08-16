@@ -370,7 +370,7 @@ export class GameRenderer {
         const unitTrunk = new THREE.CylinderGeometry(0.18, 0.32, 1, 6);
         const unitCrown = new THREE.SphereGeometry(0.28, 6, 4);
         const unitPillar = new THREE.CylinderGeometry(0.45, 0.55, 1, 7);
-        const unitPipe = new THREE.CylinderGeometry(0.22, 0.22, 1, 7);
+        const unitPipe = new THREE.CylinderGeometry(0.22, 0.22, 1, 5);
 
         // 复用矩阵/向量对象
         const _m = new THREE.Matrix4();
@@ -547,8 +547,40 @@ export class GameRenderer {
                     const back = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.6, 0.05), this.woodDarkMat);
                     back.position.set(0, 0.5, -0.4);
                     grp.add(top, l, r, back);
+                    // 显示器（f 版设定：远处电脑的嗡嗡声）
+                    if (Math.random() < 0.65) {
+                        const mon = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.4, 0.06), new THREE.MeshStandardMaterial({ color: 0x1a1a1e, roughness: 0.4 }));
+                        mon.position.set(0.2, 1.02, -0.28);
+                        const scr = new THREE.Mesh(new THREE.PlaneGeometry(0.45, 0.3), new THREE.MeshBasicMaterial({
+                            color: 0x88bbff, transparent: true, opacity: 0.75
+                        }));
+                        scr.position.set(0.2, 1.02, -0.305);
+                        const stand = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.1, 0.14), this.woodDarkMat);
+                        stand.position.set(0.2, 0.86, -0.28);
+                        grp.add(mon, scr, stand);
+                    }
                     grp.position.set(d.x, 0, d.z);
                     grp.rotation.y = d.rot;
+                    single.push(grp);
+                } else if (d.type === 'chandelier') {
+                    // Level 5 恐怖酒店：1930 年代吊灯
+                    const grp = new THREE.Group();
+                    const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.9, 6), this.metalMat);
+                    rod.position.y = WALL_H - 0.45;
+                    const shade = new THREE.Mesh(new THREE.ConeGeometry(0.5, 0.55, 8, 1, true), new THREE.MeshStandardMaterial({
+                        color: 0x8a7a4a, roughness: 0.5, metalness: 0.5, side: THREE.DoubleSide
+                    }));
+                    shade.position.y = WALL_H - 1.0;
+                    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 6), new THREE.MeshBasicMaterial({
+                        color: 0xffe8a0, transparent: true, opacity: 0.95
+                    }));
+                    bulb.position.y = WALL_H - 0.75;
+                    const halo = new THREE.Mesh(new THREE.SphereGeometry(0.7, 8, 6), new THREE.MeshBasicMaterial({
+                        color: 0xffd880, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false
+                    }));
+                    halo.position.y = WALL_H - 0.75;
+                    grp.add(rod, shade, bulb, halo);
+                    grp.position.set(d.x, 0, d.z);
                     single.push(grp);
                 } else if (d.type === 'chair') {
                     const grp = new THREE.Group();

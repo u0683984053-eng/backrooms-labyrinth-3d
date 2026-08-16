@@ -358,6 +358,19 @@ body {
 }
 #transition-level-desc { color: #888; font-style: italic; }
 
+/* 通关画面 */
+#ending-screen { background: radial-gradient(ellipse at center, rgba(40,30,5,0.95), rgba(5,5,0,0.98)); }
+.ending-content { text-align: center; padding: 60px; }
+.ending-content h1 {
+    font-size: 2.8rem;
+    letter-spacing: 0.3em;
+    color: #e8d88a;
+    text-shadow: 0 0 40px rgba(230,200,80,0.8);
+    margin-bottom: 20px;
+}
+.ending-content p { color: #a8a080; margin-bottom: 10px; font-size: 1.1rem; }
+.ending-sub { color: #666; font-style: italic; margin-bottom: 40px; }
+
 /* 滚动条 */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: #0a0a05; }

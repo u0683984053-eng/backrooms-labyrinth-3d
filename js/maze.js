@@ -179,7 +179,7 @@ export class MazeGenerator {
         const t = this.config.terrainType;
         const counts = {
             [TerrainType.OFFICE]: { desk: 10, chair: 8, locker: 4 },
-            [TerrainType.HOTEL]: { bed: 6, chair: 4, locker: 6 },
+            [TerrainType.HOTEL]: { bed: 6, chair: 4, locker: 6, chandelier: 5 },
             [TerrainType.HALLS]: { locker: 8 },
             [TerrainType.HOSPITAL]: { bed: 6, locker: 6 },
             [TerrainType.WAREHOUSE]: { cratepile: 10, shelf: 8 },
