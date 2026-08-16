@@ -188,7 +188,9 @@ class BackroomsGame {
 
         this.entityManager.spawnEntities(this.mazeData.entitySpawns);
         this.audio.stopAmbient();
-        this.audio.startAmbient(id);
+        // f 版设定：Level 6「熄灭」绝对寂静（除脚步声外一切无声）
+        this.audio.setSilent(id === 6);
+        if (id !== 6) this.audio.startAmbient(id);
 
         document.getElementById('level-indicator').textContent = 'Level ' + id + ' - ' + config.name + '  [' + getSurvivalClassInfo(config.survivalClass).label + ']';
         document.getElementById('flashlight-indicator').classList.add('hidden');

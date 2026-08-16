@@ -994,6 +994,39 @@ export class GameRenderer {
                     grp.add(wall, balls);
                     grp.position.set(d.x, 0, d.z);
                     single.push(grp);
+                } else if (d.type === 'billboard') {
+                    // Level 11 城市：发光广告牌
+                    const grp = new THREE.Group();
+                    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 4.0, 7), this.metalMat);
+                    pole.position.y = 2.0;
+                    const panel = new THREE.Mesh(new THREE.BoxGeometry(3.4, 1.4, 0.12), new THREE.MeshStandardMaterial({
+                        color: 0x2a2a30, roughness: 0.6, metalness: 0.3
+                    }));
+                    panel.position.y = 4.3;
+                    const adColors = [0xff4040, 0x40ff40, 0x4040ff, 0xffaa00];
+                    const ad = new THREE.Mesh(new THREE.PlaneGeometry(3.1, 1.1), new THREE.MeshBasicMaterial({
+                        color: adColors[Math.floor(Math.random() * adColors.length)],
+                        transparent: true, opacity: 0.85
+                    }));
+                    ad.position.set(0, 4.3, 0.07);
+                    grp.add(pole, panel, ad);
+                    grp.position.set(d.x, 0, d.z);
+                    grp.rotation.y = d.rot;
+                    single.push(grp);
+                } else if (d.type === 'cubicle') {
+                    // Level 4 办公室：半高隔间（f 版：空荡的隔间）
+                    const grp = new THREE.Group();
+                    const wallMat = new THREE.MeshStandardMaterial({ color: 0x8a8a92, roughness: 0.7 });
+                    const p1 = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.2, 0.05), wallMat);
+                    p1.position.set(0, 0.6, 0);
+                    const p2 = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.2, 2.4), wallMat);
+                    p2.position.set(1.18, 0.6, 0);
+                    const frame = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.04, 0.05), new THREE.MeshStandardMaterial({ color: 0x5a5a62, roughness: 0.6 }));
+                    frame.position.set(0, 1.22, 0);
+                    grp.add(p1, p2, frame);
+                    grp.position.set(d.x, 0, d.z);
+                    grp.rotation.y = d.rot;
+                    single.push(grp);
                 } else if (d.type === 'blackboard') {
                     // Level 52「学校」：教室黑板
                     const grp = new THREE.Group();

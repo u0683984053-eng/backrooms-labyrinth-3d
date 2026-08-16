@@ -96,9 +96,9 @@ export class EntityManager {
                     e.state = 'chase'; e.chaseTimer = 0;
                     break;
                 case 'chase':
-                    if (dist > effDet * 1.5 && e.chaseTimer > 3) { e.state = 'idle'; break; }
+                    if (dist > effDet * 1.5 && e.chaseTimer > 3) { e.state = 'returning'; break; }
                     e.chaseTimer += dt;
-                    if (e.chaseTimer > e.maxChaseDur) { e.state = 'idle'; break; }
+                    if (e.chaseTimer > e.maxChaseDur) { e.state = 'returning'; break; }
                     e.target.copy(player.position);
                     // f 版设定：派对客的追逐诡异而有节奏（追一会儿、停一会儿）
                     if (e.type === 'partygoer') {
@@ -107,6 +107,11 @@ export class EntityManager {
                     }
                     this._moveTo(e, player.position, e.speed * 1.2 * dt * 10);
                     if (dist < 1.5) { e.state = 'attack'; e.attackCd = 0; }
+                    break;
+                case 'returning':
+                    // f 版设定：实体有领地意识，追丢后返回出生地
+                    this._moveTo(e, e.spawn, e.speed * 0.45 * dt * 10);
+                    if (e.pos.distanceTo(e.spawn) < 2) e.state = 'idle';
                     break;
                 case 'attack':
                     e.attackCd += dt;

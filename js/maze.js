@@ -262,7 +262,7 @@ export class MazeGenerator {
                 placed++;
             }
         } else if (this.config.id === 11) {
-            // Level 11「无尽城市」：街道路灯（夜晚亮起）
+            // Level 11「无尽城市」：街道路灯 + 广告牌
             for (let i = 0; i < 16; i++) {
                 const ex = 1 + Math.floor(Math.random() * (this.width - 2));
                 const ey = 1 + Math.floor(Math.random() * (this.height - 2));
@@ -271,6 +271,31 @@ export class MazeGenerator {
                     x: ex * this.cellSize,
                     z: ey * this.cellSize
                 });
+            }
+            for (let i = 0; i < 6; i++) {
+                const ex = 1 + Math.floor(Math.random() * (this.width - 2));
+                const ey = 1 + Math.floor(Math.random() * (this.height - 2));
+                this.decorations.push({
+                    type: 'billboard',
+                    x: ex * this.cellSize,
+                    z: ey * this.cellSize,
+                    rot: Math.floor(Math.random() * 4) * (Math.PI / 2)
+                });
+            }
+        } else if (this.config.id === 4) {
+            // Level 4「废弃办公室」：半高隔间
+            let placed = 0;
+            for (let t2 = 0; t2 < 60 && placed < 8; t2++) {
+                const ex = 2 + Math.floor(Math.random() * (this.width - 4));
+                const ey = 2 + Math.floor(Math.random() * (this.height - 4));
+                if (this._cellBlocked(ex, ey, 0)) continue;
+                this.decorations.push({
+                    type: 'cubicle',
+                    x: ex * this.cellSize + (Math.random() - 0.5) * 2,
+                    z: ey * this.cellSize + (Math.random() - 0.5) * 2,
+                    rot: Math.floor(Math.random() * 4) * (Math.PI / 2)
+                });
+                placed++;
             }
         } else if (this.config.id === 9 || this.config.id === 94) {
             // Level 9 / 94：郊区路灯

@@ -1,10 +1,15 @@
-export class AudioManager {
+﻿export class AudioManager {
     constructor() {
         this.ctx = null;
         this.master = null;
         this.enabled = false;
         this.ambient = null;
+        this.silent = false; // f 版设定：Level 6「熄灭」绝对寂静
     }
+
+    setSilent(v) { this.silent = !!v; }
+
+    _ok() { return this.enabled && !this.silent; }
 
     async init() {
         try {
@@ -17,13 +22,13 @@ export class AudioManager {
     }
 
     playStep() {
-        if (!this.enabled) return;
+        if (!this._ok()) return;
         this._noise(0.04, 0.06, 80 + Math.random() * 200);
     }
 
     // 水中脚步（Level 7 深海、Level 37 泳池）
     playStepWater() {
-        if (!this.enabled) return;
+        if (!this._ok()) return;
         const t = this.ctx.currentTime;
         const o = this.ctx.createOscillator();
         const g = this.ctx.createGain();
@@ -39,22 +44,22 @@ export class AudioManager {
 
     // 雪地脚步（Level 210 雪球）
     playStepSnow() {
-        if (!this.enabled) return;
+        if (!this._ok()) return;
         this._noise(0.05, 0.08, 2600 + Math.random() * 900);
     }
 
     playEntityNearby() {
-        if (!this.enabled) return;
+        if (!this._ok()) return;
         this._noise(0.08, 0.2, 40 + Math.random() * 80);
     }
 
     playDamage() {
-        if (!this.enabled) return;
+        if (!this._ok()) return;
         this._noise(0.25, 0.4, 30 + Math.random() * 60);
     }
 
     playTransition() {
-        if (!this.enabled) return;
+        if (!this._ok()) return;
         const t = this.ctx.currentTime;
         const o = this.ctx.createOscillator();
         const g = this.ctx.createGain();
@@ -68,7 +73,7 @@ export class AudioManager {
     }
 
     playCollect() {
-        if (!this.enabled) return;
+        if (!this._ok()) return;
         const t = this.ctx.currentTime;
         const o = this.ctx.createOscillator();
         const g = this.ctx.createGain();
@@ -119,7 +124,7 @@ export class AudioManager {
             clearInterval(s.iv);
         }
         this.levelSounds = [];
-        if (!this.enabled) return;
+        if (!this._ok()) return;
         const mk = () => {
             const o = this.ctx.createOscillator();
             const g = this.ctx.createGain();
@@ -134,7 +139,7 @@ export class AudioManager {
             // 恐怖酒店：走调的留声机圆舞曲
             const notes = [392, 330, 294, 330, 392, 330, 294, 262];
             const iv = setInterval(() => {
-                if (!this.enabled) return;
+                if (!this._ok()) return;
                 for (let i = 0; i < notes.length; i++) {
                     const s = mk();
                     s.o.type = 'triangle';
@@ -150,7 +155,7 @@ export class AudioManager {
         } else if (levelId === 8) {
             // 洞穴：远处滴水声（带回声感）
             const iv = setInterval(() => {
-                if (!this.enabled) return;
+                if (!this._ok()) return;
                 for (let i = 0; i < 2; i++) {
                     const s = mk();
                     s.o.type = 'sine';
@@ -181,7 +186,7 @@ export class AudioManager {
         } else if (levelId === 52) {
             // 学校：远处上课铃声
             const iv = setInterval(() => {
-                if (!this.enabled) return;
+                if (!this._ok()) return;
                 for (let i = 0; i < 3; i++) {
                     const s = mk();
                     s.o.type = 'sine';
@@ -202,7 +207,7 @@ export class AudioManager {
             s.g.gain.value = 0.022;
             this.levelSounds.push(s);
             const iv = setInterval(() => {
-                if (!this.enabled) return;
+                if (!this._ok()) return;
                 const p = mk();
                 p.o.type = 'square';
                 p.o.frequency.value = 80;
@@ -222,7 +227,7 @@ export class AudioManager {
             s.g.gain.value = 0.05;
             this.levelSounds.push(s);
             const iv = setInterval(() => {
-                if (!this.enabled) return;
+                if (!this._ok()) return;
                 const w = mk();
                 w.o.type = 'sine';
                 w.o.frequency.setValueAtTime(60, t());
@@ -279,7 +284,7 @@ export class AudioManager {
     }
 
     _noise(vol, dur, freq) {
-        if (!this.enabled) return;
+        if (!this._ok()) return;
         const t = this.ctx.currentTime;
         const o = this.ctx.createOscillator();
         const g = this.ctx.createGain();
@@ -293,7 +298,7 @@ export class AudioManager {
 
     // 猎犬吠叫（f 版设定：猎犬会发出类似犬吠的叫声）
     playBark() {
-        if (!this.enabled) return;
+        if (!this._ok()) return;
         const t = this.ctx.currentTime;
         const o = this.ctx.createOscillator();
         const g = this.ctx.createGain();
@@ -310,7 +315,7 @@ export class AudioManager {
 
     // 抓挠者刮墙（f 版设定：长爪刮擦墙壁的声响）
     playScratch() {
-        if (!this.enabled) return;
+        if (!this._ok()) return;
         const t = this.ctx.currentTime;
         const o = this.ctx.createOscillator();
         const g = this.ctx.createGain();
@@ -327,7 +332,7 @@ export class AudioManager {
 
     // 火盐投掷爆炸
     playFireSalt() {
-        if (!this.enabled) return;
+        if (!this._ok()) return;
         const t = this.ctx.currentTime;
         const o = this.ctx.createOscillator();
         const g = this.ctx.createGain();
@@ -345,7 +350,7 @@ export class AudioManager {
 
     // 派对客诡异"音乐"（f 版设定：派对客邀请你参加派对）
     playParty() {
-        if (!this.enabled) return;
+        if (!this._ok()) return;
         const t = this.ctx.currentTime;
         const notes = [660, 784, 880, 1046, 880, 784];
         for (let i = 0; i < notes.length; i++) {
@@ -363,7 +368,7 @@ export class AudioManager {
 
     // 卡出（noclip）音效：低频轰鸣 + 噪声
     playNoclip() {
-        if (!this.enabled) return;
+        if (!this._ok()) return;
         const t = this.ctx.currentTime;
         const o = this.ctx.createOscillator();
         const g = this.ctx.createGain();
