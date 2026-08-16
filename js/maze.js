@@ -273,6 +273,35 @@ export class MazeGenerator {
                 });
                 placed++;
             }
+        } else if (this.config.id === 13) {
+            // Level 13「建筑」：公寓门
+            let placed = 0;
+            for (let t2 = 0; t2 < 70 && placed < 10; t2++) {
+                const ex = 2 + Math.floor(Math.random() * (this.width - 4));
+                const ey = 2 + Math.floor(Math.random() * (this.height - 4));
+                if (this._cellBlocked(ex, ey, 0)) continue;
+                this.decorations.push({
+                    type: 'aptdoor',
+                    x: ex * this.cellSize,
+                    z: ey * this.cellSize,
+                    rot: Math.floor(Math.random() * 4) * (Math.PI / 2)
+                });
+                placed++;
+            }
+        } else if (this.config.id === 94) {
+            // Level 94 金斯威尔小镇：路边邮箱
+            let placed = 0;
+            for (let t2 = 0; t2 < 60 && placed < 8; t2++) {
+                const ex = 1 + Math.floor(Math.random() * (this.width - 2));
+                const ey = 1 + Math.floor(Math.random() * (this.height - 2));
+                if (this._cellBlocked(ex, ey, 0)) continue;
+                this.decorations.push({
+                    type: 'mailbox',
+                    x: ex * this.cellSize + (Math.random() - 0.5) * 3,
+                    z: ey * this.cellSize + (Math.random() - 0.5) * 3
+                });
+                placed++;
+            }
         } else if (this.config.id === 11) {
             // Level 11「无尽城市」：街道路灯 + 广告牌
             for (let i = 0; i < 16; i++) {

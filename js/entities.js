@@ -10,8 +10,13 @@ export class EntityManager {
         this.night = false;
     }
 
-    // f 版设定：Level 11 夜晚实体更活跃
-    setNight(n) { this.night = !!n; }
+    // f 版设定：Level 11 夜晚实体更活跃、游荡更远
+    setNight(n) {
+        this.night = !!n;
+        for (const e of this.entities) {
+            e.patrolR = (e.basePatrolR || e.patrolR) * (this.night ? 2.2 : 1);
+        }
+    }
 
     spawnEntities(spawnData) {
         this.clear();
@@ -28,6 +33,7 @@ export class EntityManager {
                 pos: new THREE.Vector3(sd.x, 1, sd.z),
                 spawn: new THREE.Vector3(sd.x, 1, sd.z),
                 patrolR: sd.patrolRadius || 10,
+                basePatrolR: sd.patrolRadius || 10,
                 state: 'idle',
                 target: new THREE.Vector3(),
                 speed: def.speed, health: def.health,
@@ -50,7 +56,9 @@ export class EntityManager {
         for (const e of this.entities) {
             if (!e.alive) continue;
             const dist = e.pos.distanceTo(player.position);
-            const effDet = e.detectionR * (1 + (player.noise || 0)) * (player.flashlightOn ? 1.8 : 1) * (this.night ? 1.5 : 1);
+            // f 版设定：蹲下潜行大幅降低被发现的概率；手电筒/噪音吸引实体
+            const stealth = player.isCrouching ? 0.55 : 1;
+            const effDet = e.detectionR * (1 + (player.noise || 0)) * (player.flashlightOn ? 1.8 : 1) * (this.night ? 1.5 : 1) * stealth;
 
             // ---- f 版设定：死亡蛾是趋光的无害飞蛾，绕光源/玩家盘旋 ----
             if (e.type === 'deathmoth') {

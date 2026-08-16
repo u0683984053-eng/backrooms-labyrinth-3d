@@ -1055,6 +1055,37 @@ export class GameRenderer {
                     grp.position.set(d.x, 0, d.z);
                     grp.rotation.y = d.rot;
                     single.push(grp);
+                } else if (d.type === 'aptdoor') {
+                    // Level 13 建筑：公寓门
+                    const grp = new THREE.Group();
+                    const frame = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.4, 0.08), this.woodDarkMat);
+                    frame.position.y = 1.2;
+                    const door = new THREE.Mesh(new THREE.BoxGeometry(1.0, 2.2, 0.05), this.woodMat);
+                    door.position.set(0, 1.1, 0.06);
+                    const knob = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 5), new THREE.MeshStandardMaterial({ color: 0xc8a830, roughness: 0.3, metalness: 0.7 }));
+                    knob.position.set(0.38, 1.0, 0.1);
+                    const num = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.1, 0.01), new THREE.MeshBasicMaterial({
+                        color: 0xffe8a0, transparent: true, opacity: 0.8
+                    }));
+                    num.position.set(0, 1.85, 0.09);
+                    grp.add(frame, door, knob, num);
+                    grp.position.set(d.x, 0, d.z);
+                    grp.rotation.y = d.rot;
+                    single.push(grp);
+                } else if (d.type === 'mailbox') {
+                    // Level 94 小镇：红色邮箱
+                    const grp = new THREE.Group();
+                    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 1.1, 6), this.metalMat);
+                    post.position.y = 0.55;
+                    const box = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.35, 0.25), new THREE.MeshStandardMaterial({
+                        color: 0xb03030, roughness: 0.6, metalness: 0.3
+                    }));
+                    box.position.y = 1.15;
+                    const flag = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.2, 0.04), new THREE.MeshStandardMaterial({ color: 0xd8d8d8, roughness: 0.5 }));
+                    flag.position.set(0.27, 1.3, 0);
+                    grp.add(post, box, flag);
+                    grp.position.set(d.x, 0, d.z);
+                    single.push(grp);
                 } else if (d.type === 'blackboard') {
                     // Level 52「学校」：教室黑板
                     const grp = new THREE.Group();

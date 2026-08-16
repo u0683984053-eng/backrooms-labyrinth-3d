@@ -125,8 +125,14 @@ class BackroomsGame {
             this.player.toggleFlashlight();
             document.getElementById('flashlight-indicator').classList.toggle('hidden', !this.player.flashlightOn);
         }
-        if (e.code === 'KeyC' && !e.ctrlKey && !this.backpackOpen && !this.cheatOpen)
+        if (e.code === 'KeyC' && !e.ctrlKey && !this.backpackOpen && !this.cheatOpen) {
             this.player.crouch(!this.player.isCrouching);
+            // f 版设定：潜行状态提示
+            this.player.statusEffects = this.player.statusEffects.filter(s => s.name !== '潜行');
+            if (this.player.isCrouching) {
+                this.player.addStatusEffect({ name: '潜行', color: '#88aaff', duration: Infinity });
+            }
+        }
         if (e.code === 'Escape') {
             if (this.backpackOpen) this.toggleBackpack(false);
             if (this.cheatOpen) this.toggleCheat(false);
