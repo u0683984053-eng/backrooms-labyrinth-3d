@@ -946,6 +946,54 @@ export class GameRenderer {
                     grp.position.set(d.x, 0, d.z);
                     grp.rotation.y = d.rot;
                     single.push(grp);
+                } else if (d.type === 'carousel') {
+                    // Level 283 玩耍之地：旋转木马（彩条圆柱 + 锥顶）
+                    const grp = new THREE.Group();
+                    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 3.4, 8), this.metalMat);
+                    pole.position.y = 1.7;
+                    const top = new THREE.Mesh(new THREE.ConeGeometry(1.6, 0.9, 10), new THREE.MeshStandardMaterial({
+                        color: 0xc02060, roughness: 0.6, emissive: 0x300018, emissiveIntensity: 0.4
+                    }));
+                    top.position.y = 3.6;
+                    for (let i = 0; i < 6; i++) {
+                        const a = (i / 6) * Math.PI * 2;
+                        const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.16, 2.2, 0.16), new THREE.MeshStandardMaterial({
+                            color: [0xff6060, 0x60ff60, 0x6060ff, 0xffff60, 0xff60ff, 0x60ffff][i], roughness: 0.6
+                        }));
+                        stripe.position.set(Math.cos(a) * 1.15, 1.1, Math.sin(a) * 1.15);
+                        grp.add(stripe);
+                    }
+                    grp.add(pole, top);
+                    grp.position.set(d.x, 0, d.z);
+                    single.push(grp);
+                } else if (d.type === 'slide') {
+                    // 滑梯
+                    const grp = new THREE.Group();
+                    const ramp = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.08, 3.2), new THREE.MeshStandardMaterial({
+                        color: 0xff8040, roughness: 0.7
+                    }));
+                    ramp.position.set(0, 1.1, 0.6);
+                    ramp.rotation.x = 0.5;
+                    const stairs = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.6, 0.8), this.woodMat);
+                    stairs.position.set(0, 0.8, -1.3);
+                    grp.add(ramp, stairs);
+                    grp.position.set(d.x, 0, d.z);
+                    grp.rotation.y = d.rot;
+                    single.push(grp);
+                } else if (d.type === 'ballpit') {
+                    // 彩球池
+                    const grp = new THREE.Group();
+                    const wall = new THREE.Mesh(new THREE.CylinderGeometry(1.7, 1.7, 0.5, 14, 1, true), new THREE.MeshStandardMaterial({
+                        color: 0x4070c0, roughness: 0.8, side: THREE.DoubleSide
+                    }));
+                    wall.position.y = 0.25;
+                    const balls = new THREE.Mesh(new THREE.CylinderGeometry(1.55, 1.55, 0.35, 12), new THREE.MeshBasicMaterial({
+                        color: 0x80b0ff, transparent: true, opacity: 0.35
+                    }));
+                    balls.position.y = 0.2;
+                    grp.add(wall, balls);
+                    grp.position.set(d.x, 0, d.z);
+                    single.push(grp);
                 } else if (d.type === 'blackboard') {
                     // Level 52「学校」：教室黑板
                     const grp = new THREE.Group();

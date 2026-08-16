@@ -295,7 +295,7 @@ class BackroomsGame {
             this.player.update(dt, this.input, this.mazeData ? this.mazeData.grid : null, 5, this.mazeData ? this.mazeData.platforms : null);
             this.renderer.updateLights(this.flickerTime);
             this.renderer.updateFlashlight(this.player, this.flickerTime);
-            this.entityManager.update(dt, this.player);
+            this.entityManager.update(dt, this.player, this.mazeData ? this.mazeData.grid : null);
             this._checkExit();
 
             // f 版设定：补给拾取
@@ -446,18 +446,27 @@ class BackroomsGame {
     }
 
     _collectPickup(pk) {
-        // f 版设定：M.E.G. 遗落文档 → 阅读档案（不入背包）
+        // f 版设定：M.E.G. 遗落文档 → 阅读档案（不入背包，按层级专属）
         if (pk.type === 'meg_doc') {
-            const DOCS = [
-                'M.E.G. 档案 #001：「如果你不小心，在错误的地方切出现实，你就会进入后室。那里只有潮湿地毯的臭味，疯狂吞噬着你的理智……」',
-                'M.E.G. 档案 #002：「杏仁水是从后室中提取的流体，能恢复理智。注意：腰果水与它截然相反——千万别喝错。」',
-                'M.E.G. 档案 #007：「猎犬是四足的捕食者，会发出类似犬吠的叫声。听到吠叫，跑。」',
-                'M.E.G. 档案 #011：「微笑者只在黑暗中显形。如果黑暗中有一张苍白的笑脸在凝视你——不要与它对视。」',
-                'M.E.G. 档案 #018：「派对客会邀请你参加派对。拒绝。永远拒绝。」',
-                'M.E.G. 档案 #023：「火盐是少数能伤害实体的物质。流浪者总是随身携带。」',
-                'M.E.G. 档案 #031：「Level 0 的出口被称为卡出。有人说，只要贴着墙壁行走并相信，就能穿过现实。」',
-            ];
-            const text = DOCS[Math.floor(Math.random() * DOCS.length)];
+            const lv = this.currentLevel;
+            const DOCS = {
+                common: [
+                    'M.E.G. 档案 #002：「杏仁水是从后室中提取的流体，能恢复理智。注意：腰果水与它截然相反——千万别喝错。」',
+                    'M.E.G. 档案 #007：「猎犬是四足的捕食者，会发出类似犬吠的叫声。听到吠叫，跑。」',
+                    'M.E.G. 档案 #011：「微笑者只在黑暗中显形。如果黑暗中有一张苍白的笑脸在凝视你——不要与它对视。」',
+                    'M.E.G. 档案 #018：「派对客会邀请你参加派对。拒绝。永远拒绝。」',
+                    'M.E.G. 档案 #023：「火盐是少数能伤害实体的物质。流浪者总是随身携带。」',
+                ],
+                0: ['M.E.G. 档案 #001：「如果你不小心，在错误的地方切出现实，你就会进入后室。那里只有潮湿地毯的臭味，疯狂吞噬着你的理智……」',
+                    'M.E.G. 档案 #031：「Level 0 的出口被称为卡出。有人说，只要贴着墙壁行走并相信，就能穿过现实。」'],
+                1: ['M.E.G. 档案 #005：「Level 1 是宜居区。这里有物资、有灯光，还有——希望。珍惜它。」'],
+                5: ['M.E.G. 档案 #009：「Level 5 的酒店在 1930 年代就已废弃。如果你听到留声机的音乐——那声音不是来自任何房间。」'],
+                33: ['M.E.G. 档案 #017：「Level 33 的电梯会去往任何楼层。据说有一部电梯会带你到后室之外。我们还没找到那部。」'],
+                56: ['M.E.G. 档案 #029：「Level 56 的太空站重力只有 0.8G。注意那些舷窗——窗外的星星，有些在移动。」'],
+                283: ['M.E.G. 档案 #041：「Level 283 是游乐场。旋转木马永远在转。如果你听到孩子的笑声——那不是孩子。」'],
+            };
+            const pool = DOCS[lv] || DOCS.common;
+            const text = pool[Math.floor(Math.random() * pool.length)];
             this._showMegDoc(text);
             this._removePickupMesh(pk);
             this.mazeData.pickups = this.mazeData.pickups.filter(p => p !== pk);

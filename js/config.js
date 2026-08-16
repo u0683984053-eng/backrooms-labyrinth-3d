@@ -208,6 +208,11 @@ export const LEVEL_CONFIGS = {
         [MazeRenderFlags.FLICKERING_LIGHTS],
         ['smiler', 'hound', 'skin_stealer', 'clump', 'partygoer']),
 
+    283: def(283, '玩耍之地', '无尽延伸的室内游乐场。旋转木马在转，彩球池在笑。派对永不结束。',
+        TerrainType.COMPLEX, SurvivalClass.THREE, Environment.INDOOR_ARTIFICIAL,
+        [MazeRenderFlags.FLICKERING_LIGHTS],
+        ['partygoer', 'smiler', 'clump']),
+
     399: def(399, '霓虹深渊', '赛博朋克风格的空间，霓虹灯、湿漉漉的街道和无尽的雨。',
         TerrainType.URBAN, SurvivalClass.TWO, Environment.OUTDOOR_TERRESTRIAL,
         [MazeRenderFlags.OPEN_BORDER, MazeRenderFlags.DOUBLE_SIDED, MazeRenderFlags.FOG_HEAVY],

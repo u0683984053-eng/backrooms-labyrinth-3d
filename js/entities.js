@@ -40,8 +40,9 @@ export class EntityManager {
         }
     }
 
-    update(dt, player) {
+    update(dt, player, grid) {
         if (!player.alive) return;
+        this.grid = grid || this.grid;
         this.timer += dt;
         if (this.timer < 0.1) { this.entities.forEach(e => { if (e.alive) e.mesh.position.copy(e.pos); }); return; }
         this.timer = 0;
@@ -126,7 +127,32 @@ export class EntityManager {
         const d = new THREE.Vector3().subVectors(target, e.pos); d.y = 0;
         const len = d.length(); if (len < 0.1) return;
         d.normalize();
-        e.pos.addScaledVector(d, Math.min(amount, len));
+        const step = Math.min(amount, len);
+        if (this.grid) {
+            // 避障：实体 AABB 与格边界墙相交才阻挡（滑动绕行，实体不再穿墙也不卡格）
+            const blocked = (px, pz) => {
+                const gx = Math.floor(px / 5), gz = Math.floor(pz / 5);
+                if (gx < 0 || gx >= this.grid.length || gz < 0 || gz >= this.grid[0].length) return true;
+                const c = this.grid[gx][gz];
+                const R = 0.3;
+                const lx = px - gx * 5, lz = pz - gz * 5;
+                if (c.walls[0] && lz < -2.5 + 0.15 + R) return true;
+                if (c.walls[1] && lx > 2.5 - 0.15 - R) return true;
+                if (c.walls[2] && lz > 2.5 - 0.15 - R) return true;
+                if (c.walls[3] && lx < -2.5 + 0.15 + R) return true;
+                return false;
+            };
+            const nx = e.pos.x + d.x * step, nz = e.pos.z + d.z * step;
+            if (!blocked(nx, nz)) {
+                e.pos.x = nx; e.pos.z = nz;
+            } else if (!blocked(e.pos.x + d.x * step, e.pos.z)) {
+                e.pos.x += d.x * step;
+            } else if (!blocked(e.pos.x, e.pos.z + d.z * step)) {
+                e.pos.z += d.z * step;
+            }
+        } else {
+            e.pos.addScaledVector(d, step);
+        }
         e.mesh.position.copy(e.pos);
         e.mesh.lookAt(e.pos.x + d.x, e.pos.y, e.pos.z + d.z);
     }

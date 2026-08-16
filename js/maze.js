@@ -179,6 +179,37 @@ export class MazeGenerator {
                     rot: Math.floor(Math.random() * 4) * (Math.PI / 2)
                 });
             }
+        } else if (this.config.id === 283) {
+            // Level 283「玩耍之地」：旋转木马 + 滑梯 + 彩球池
+            let placed = 0;
+            for (let t2 = 0; t2 < 80 && placed < 5; t2++) {
+                const ex = 2 + Math.floor(Math.random() * (this.width - 4));
+                const ey = 2 + Math.floor(Math.random() * (this.height - 4));
+                if (this._cellBlocked(ex, ey, 0)) continue;
+                this.decorations.push({ type: 'carousel', x: ex * this.cellSize, z: ey * this.cellSize });
+                placed++;
+            }
+            placed = 0;
+            for (let t2 = 0; t2 < 80 && placed < 6; t2++) {
+                const ex = 2 + Math.floor(Math.random() * (this.width - 4));
+                const ey = 2 + Math.floor(Math.random() * (this.height - 4));
+                if (this._cellBlocked(ex, ey, 0)) continue;
+                this.decorations.push({
+                    type: 'slide',
+                    x: ex * this.cellSize + (Math.random() - 0.5) * 2,
+                    z: ey * this.cellSize + (Math.random() - 0.5) * 2,
+                    rot: Math.floor(Math.random() * 4) * (Math.PI / 2)
+                });
+                placed++;
+            }
+            placed = 0;
+            for (let t2 = 0; t2 < 60 && placed < 4; t2++) {
+                const ex = 2 + Math.floor(Math.random() * (this.width - 4));
+                const ey = 2 + Math.floor(Math.random() * (this.height - 4));
+                if (this._cellBlocked(ex, ey, 0)) continue;
+                this.decorations.push({ type: 'ballpit', x: ex * this.cellSize, z: ey * this.cellSize });
+                placed++;
+            }
         } else if (this.config.id === 33) {
             // Level 33「电梯」：金属电梯门（每 2 格一个）
             for (let x = 2; x < this.width - 2; x += 2) {
