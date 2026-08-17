@@ -30,6 +30,8 @@ class BackroomsGame {
         this.stepTimer = 0;
         this.noclipHeld = 0;
         this.playTime = 0;
+        this._lastHealth = 100;
+        this._shakeT = 0;
 
         this._setupUI();
         this._initAudio();
@@ -390,6 +392,23 @@ class BackroomsGame {
             if (nearby.length > 0 && Math.random() < 0.03) this.audio.playEntityNearby();
 
             if (!this.player.alive) { this._dead = true; this._onDeath(); }
+        }
+
+        // 受伤反馈：红闪 + 相机震动
+        if (this.player.health < this._lastHealth) {
+            const df = document.getElementById('damage-flash');
+            if (df) {
+                df.classList.remove('flash');
+                void df.offsetWidth;
+                df.classList.add('flash');
+            }
+            this._shakeT = 0.35;
+        }
+        this._lastHealth = this.player.health;
+        if (this._shakeT > 0) {
+            this._shakeT -= dt;
+            this.renderer.camera.position.x += (Math.random() - 0.5) * 0.06;
+            this.renderer.camera.position.y += (Math.random() - 0.5) * 0.05;
         }
 
         // f 版设定：Level 404 光源失效提示计时

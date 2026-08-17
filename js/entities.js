@@ -34,6 +34,7 @@ export class EntityManager {
                 spawn: new THREE.Vector3(sd.x, 1, sd.z),
                 patrolR: sd.patrolRadius || 10,
                 basePatrolR: sd.patrolRadius || 10,
+                seed: Math.random() * Math.PI * 2,
                 state: 'idle',
                 target: new THREE.Vector3(),
                 speed: def.speed, health: def.health,
@@ -135,6 +136,11 @@ export class EntityManager {
             }
         }
         this.entities = this.entities.filter(e => e.alive);
+        // 实体呼吸浮动（生物感，顶级 3D 的活物表现）
+        for (const e of this.entities) {
+            if (e.type === 'deathmoth') continue;
+            e.mesh.position.y = e.pos.y + Math.sin(this.timer * 2.2 + e.seed) * 0.05;
+        }
     }
 
     _moveTo(e, target, amount) {

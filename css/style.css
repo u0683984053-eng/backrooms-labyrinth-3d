@@ -204,6 +204,24 @@ body {
     text-shadow: 0 0 3px #000;
 }
 
+/* 受伤红闪（顶级 FPS 的受击反馈） */
+#damage-flash {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    opacity: 0;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(180, 0, 0, 0.55) 100%);
+    z-index: 17;
+}
+#damage-flash.flash {
+    animation: damage-flash-anim 0.45s ease-out;
+}
+@keyframes damage-flash-anim {
+    0% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
 /* 出口方向指示（流浪者不再迷路） */
 #exit-indicator {
     position: absolute;

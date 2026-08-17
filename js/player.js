@@ -39,26 +39,33 @@ export class Player {
 
         const { forward, right } = input.getInputVector();
         const len = Math.sqrt(forward * forward + right * right);
-        let speed = WALK;
+        let targetSpeed = WALK;
         let drain = 0;
 
         if (len > 0.01 && input.isSprinting() && this.stamina > 0) {
-            speed = Q_SPRINT;
+            targetSpeed = Q_SPRINT;
             drain = DRAIN_Q;
         } else if (this.isCrouching) {
-            speed = CROUCH_SPEED;
+            targetSpeed = CROUCH_SPEED;
         } else {
-            speed = len > 0.01 ? RUN : WALK;
+            targetSpeed = len > 0.01 ? RUN : WALK;
         }
 
         this.stamina = drain > 0 && len > 0.01
             ? Math.max(0, this.stamina - drain * dt)
             : Math.min(this.maxStamina, this.stamina + STAMINA_REGEN * dt);
-        if (this.stamina <= 0) speed = WALK;
+        if (this.stamina <= 0) targetSpeed = WALK;
 
-        if (speed >= DBL_SPRINT) this.noise = 0.9;
-        else if (speed >= Q_SPRINT) this.noise = 0.7;
-        else if (speed >= RUN) this.noise = 0.4;
+        // 顶级 FPS 手感：速度平滑（加速/减速渐变，消除瞬间变速的生硬感）
+        if (this.speed === undefined) this.speed = targetSpeed;
+        const accel = len > 0.01 ? 10 : 14; // 加速慢、停止快
+        this.speed += (targetSpeed - this.speed) * Math.min(1, dt * accel);
+        const speed = this.speed;
+
+        // 速度平滑的渐近收敛永远到不了目标值 → 阈值判断用容差
+        if (speed >= DBL_SPRINT - 0.5) this.noise = 0.9;
+        else if (speed >= Q_SPRINT - 0.5) this.noise = 0.7;
+        else if (speed >= RUN - 0.5) this.noise = 0.4;
         else this.noise = 0.05;
         if (this.isCrouching) this.noise *= 0.5;
 
@@ -148,7 +155,52 @@ export class Player {
         }
 
         this.position.copy(rp);
-        this.camera.position.copy(this.position);
+
+        // ---- 顶级 FPS 相机表现 ----
+        // 头部晃动（行走/奔跑时的自然起伏，跳跃与蹲伏时减弱）
+        let bobY = 0, bobX = 0;
+        if (this.isMoving && this.onGround) {
+            this.bobPhase = (this.bobPhase || 0) + dt * (this.isCrouching ? 7 : 11);
+            const amp = this.isCrouching ? 0.018 : (speed > RUN ? 0.05 : 0.035);
+            bobY = Math.sin(this.bobPhase * 2) * amp;
+            bobX = Math.cos(this.bobPhase) * amp * 0.55;
+        } else {
+            this.bobPhase = 0;
+        }
+
+        // 视差滚转：快速转向时镜头轻微倾斜（顶级 FPS 的沉浸感）
+        const yawNow = this.yaw;
+        let yawRate = (yawNow - (this.prevYaw || yawNow)) / Math.max(dt, 1e-4);
+        this.prevYaw = yawNow;
+        if (Math.abs(yawRate) > 6) yawRate = Math.sign(yawRate) * 6;
+        const rollTarget = -yawRate * 0.012;
+        this.camRoll = (this.camRoll || 0) + (rollTarget - (this.camRoll || 0)) * Math.min(1, dt * 10);
+
+        // 落地缓冲：着地瞬间镜头轻微下压再回弹
+        if (this.onGround && !this._wasOnGround && this.vy <= -4) {
+            this.landImpact = 0.08;
+        }
+        this._wasOnGround = this.onGround;
+        this.landImpact = (this.landImpact || 0) * Math.exp(-dt * 9);
+
+        // 应用相机变换（先按视角朝向，再叠加滚转）
+        this.camera.quaternion.setFromEuler(new THREE.Euler(this.pitch, this.yaw, 0, 'YXZ'));
+        if (Math.abs(this.camRoll) > 0.001) {
+            const rollQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), this.camRoll);
+            this.camera.quaternion.multiply(rollQ);
+        }
+        this.camera.position.set(
+            this.position.x + bobX,
+            this.position.y - this.landImpact + bobY,
+            this.position.z
+        );
+
+        // 冲刺动态 FOV（顶级 FPS 的速度感；用容差判断平滑速度）
+        const targetFov = (speed >= Q_SPRINT - 0.5 && this.isMoving) ? 86 : 78;
+        if (this.camera.fov !== targetFov) {
+            this.camera.fov += (targetFov - this.camera.fov) * Math.min(1, dt * 6);
+            this.camera.updateProjectionMatrix();
+        }
 
         this.sanity = Math.max(0, this.sanity - (this.sanityDrain || 0.3) * dt);
         this._tickEffects(dt);

@@ -115,12 +115,12 @@ export const LEVEL_CONFIGS = {
 
     9: def(9, '黯夜郊区', '午夜天空下无尽的郊区社区。房屋是陷阱。',
         TerrainType.URBAN, SurvivalClass.TWO, Environment.OUTDOOR_TERRESTRIAL,
-        [MazeRenderFlags.OPEN_BORDER, MazeRenderFlags.DOUBLE_SIDED, MazeRenderFlags.DARKNESS],
+        [MazeRenderFlags.OPEN_BORDER, MazeRenderFlags.DOUBLE_SIDED, MazeRenderFlags.DARKNESS, MazeRenderFlags.NO_CEILING],
         ['smiler', 'hound', 'skin_stealer', 'deathmoth']),
 
     10: def(10, '丰收', '无尽的麦田，有一间农舍、谷仓和攻击性稻草人实体。',
         TerrainType.OPEN, SurvivalClass.ONE, Environment.OUTDOOR_TERRESTRIAL,
-        [MazeRenderFlags.OPEN_BORDER, MazeRenderFlags.DOUBLE_SIDED],
+        [MazeRenderFlags.OPEN_BORDER, MazeRenderFlags.DOUBLE_SIDED, MazeRenderFlags.NO_CEILING],
         ['smiler', 'hound']),
 
     11: def(11, '无尽城市', '一座看似无限的现代城市，摩天大楼、街道和基础设施一应俱全。白天看不到实体。',
@@ -180,7 +180,7 @@ export const LEVEL_CONFIGS = {
 
     94: def(94, '金斯威尔小镇', '一个被困于永恒暮色中的1950年代小镇。平静却极度诡异。',
         TerrainType.URBAN, SurvivalClass.TWO, Environment.OUTDOOR_TERRESTRIAL,
-        [MazeRenderFlags.OPEN_BORDER, MazeRenderFlags.DOUBLE_SIDED, MazeRenderFlags.DARKNESS],
+        [MazeRenderFlags.OPEN_BORDER, MazeRenderFlags.DOUBLE_SIDED, MazeRenderFlags.DARKNESS, MazeRenderFlags.NO_CEILING],
         ['smiler', 'hound', 'skin_stealer']),
 
     100: def(100, '工厂', '废弃的工业建筑群，锈蚀机器和有毒烟雾弥漫。',

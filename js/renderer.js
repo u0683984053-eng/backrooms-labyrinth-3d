@@ -25,8 +25,31 @@ function finishTexture(t, repeat = false) {
     return t;
 }
 
+// 程序化渐变天空（顶级 3D 的户外观感）
+function makeSkyTexture(top, mid, bottom) {
+    const c = makeCanvas(64, 256);
+    const g = c.getContext('2d');
+    const grd = g.createLinearGradient(0, 0, 0, 256);
+    grd.addColorStop(0, top);
+    grd.addColorStop(0.55, mid);
+    grd.addColorStop(1, bottom);
+    g.fillStyle = grd;
+    g.fillRect(0, 0, 64, 256);
+    // 云朵噪点（顶部区域）
+    for (let i = 0; i < 40; i++) {
+        const x = Math.random() * 64, y = Math.random() * 90;
+        const r = 4 + Math.random() * 10;
+        const cl = g.createRadialGradient(x, y, 0, x, y, r);
+        cl.addColorStop(0, 'rgba(255,255,255,' + (0.05 + Math.random() * 0.08).toFixed(2) + ')');
+        cl.addColorStop(1, 'rgba(255,255,255,0)');
+        g.fillStyle = cl;
+        g.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+    return finishTexture(new THREE.CanvasTexture(c));
+}
+
 function makeWallpaperTexture() {
-    const c = makeCanvas(256, 256);
+    const c = makeCanvas(512, 512);
     const g = c.getContext('2d');
     // 素面淡黄墙纸（经典图主色 ≈ #c8b870，偏橄榄黄）
     g.fillStyle = '#c8b870';
@@ -58,7 +81,7 @@ function makeWallpaperTexture() {
 }
 
 function makeCarpetTexture() {
-    const c = makeCanvas(256, 256);
+    const c = makeCanvas(512, 512);
     const g = c.getContext('2d');
     // 黄褐色潮湿旧地毯（经典图 ≈ #8f7f48）
     g.fillStyle = '#8f7f48';
@@ -84,7 +107,7 @@ function makeCarpetTexture() {
 }
 
 function makeCeilingTexture() {
-    const c = makeCanvas(256, 256);
+    const c = makeCanvas(512, 512);
     const g = c.getContext('2d');
     // 冷白灰天花板（经典图 ≈ #b8b8ac）
     g.fillStyle = '#b8b8ac';
@@ -108,7 +131,7 @@ function makeCeilingTexture() {
 
 function makeSmileTexture() {
     // 微笑者：苍白发光面孔 + 黑色眼睛 + 咧嘴笑（f 版设定）
-    const c = makeCanvas(256, 256);
+    const c = makeCanvas(512, 512);
     const g = c.getContext('2d');
     g.fillStyle = '#e8e8e4';
     g.fillRect(0, 0, 256, 256);
@@ -177,10 +200,10 @@ export class GameRenderer {
         this.texSmile = makeSmileTexture();
         this.texCrate = makeCrateTexture();
 
-        // 材质
-        this.wallMat = new THREE.MeshStandardMaterial({ map: this.texWall, roughness: 0.92, metalness: 0.0 });
-        this.floorMat = new THREE.MeshStandardMaterial({ map: this.texFloor, roughness: 0.95, metalness: 0.0 });
-        this.ceilMat = new THREE.MeshStandardMaterial({ map: this.texCeil, roughness: 0.85, metalness: 0.02 });
+        // 材质（程序化凹凸贴图：利用纹理亮度作为高度场，增加表面细节）
+        this.wallMat = new THREE.MeshStandardMaterial({ map: this.texWall, bumpMap: this.texWall, bumpScale: 0.06, roughness: 0.92, metalness: 0.0 });
+        this.floorMat = new THREE.MeshStandardMaterial({ map: this.texFloor, bumpMap: this.texFloor, bumpScale: 0.09, roughness: 0.95, metalness: 0.0 });
+        this.ceilMat = new THREE.MeshStandardMaterial({ map: this.texCeil, bumpMap: this.texCeil, bumpScale: 0.05, roughness: 0.85, metalness: 0.02 });
         this.skirtMat = new THREE.MeshStandardMaterial({ color: 0x4a3c22, roughness: 0.9 });
         this.railMat = new THREE.MeshStandardMaterial({ color: 0x5a4c2e, roughness: 0.85 });
         this.concreteMat = new THREE.MeshStandardMaterial({ color: 0x6f6a60, roughness: 0.92 });
@@ -220,9 +243,24 @@ export class GameRenderer {
         this.flashCone.visible = false;
         this.flashGroup.add(this.flashCone);
 
-        // 第一人称手电筒模型
+        // 第一人称模型：手臂（常显）+ 手电筒（按 F 显隐）
         this.viewModelGroup = new THREE.Group();
         this.viewModelGroup.position.set(0.28, -0.26, -0.55);
+        // 手臂（顶级 FPS 的沉浸感：始终可见的持物手臂）
+        const skinMat = new THREE.MeshStandardMaterial({ color: 0xc8a080, roughness: 0.85 });
+        const sleeveMat = new THREE.MeshStandardMaterial({ color: 0x4a4a3e, roughness: 0.95 });
+        this.armGroup = new THREE.Group();
+        const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.045, 0.34, 4, 8), skinMat);
+        arm.position.set(-0.02, -0.02, 0.02);
+        arm.rotation.z = -0.35;
+        arm.rotation.x = -0.5;
+        const sleeve = new THREE.Mesh(new THREE.CapsuleGeometry(0.05, 0.2, 4, 8), sleeveMat);
+        sleeve.position.set(-0.07, 0.1, -0.05);
+        sleeve.rotation.z = -0.35;
+        sleeve.rotation.x = -0.5;
+        this.armGroup.add(arm, sleeve);
+        this.viewModelGroup.add(this.armGroup);
+
         const torchBody = new THREE.Mesh(
             new THREE.CylinderGeometry(0.028, 0.036, 0.26, 8),
             new THREE.MeshStandardMaterial({ color: 0x2a2a2e, roughness: 0.4, metalness: 0.7 })
@@ -234,8 +272,11 @@ export class GameRenderer {
         );
         torchHead.rotation.x = Math.PI / 2.4;
         torchHead.position.z = -0.15;
-        this.viewModelGroup.add(torchBody, torchHead);
-        this.viewModelGroup.visible = false;
+        this.torchGroup = new THREE.Group();
+        this.torchGroup.add(torchBody, torchHead);
+        this.torchGroup.visible = false;
+        this.viewModelGroup.add(this.torchGroup);
+        this.viewModelGroup.visible = true;
         this.camera.add(this.viewModelGroup);
         this.scene.add(this.camera);
 
@@ -415,6 +456,34 @@ export class GameRenderer {
 
         this._hasCeiling = this._hasCeiling;
         this._openBorder = this._openBorder;
+
+        // 天空穹顶（户外层级，跟随相机）
+        if (!this.skyDome) {
+            this.skyDome = new THREE.Mesh(
+                new THREE.SphereGeometry(140, 16, 12),
+                new THREE.MeshBasicMaterial({ side: THREE.BackSide, fog: false, depthWrite: false })
+            );
+            this.skyDome.frustumCulled = false;
+            this.skyDome.renderOrder = -1;
+            this.scene.add(this.skyDome);
+        }
+        if (this._outdoor) {
+            let skyTex = this._skyTexDay;
+            if (config.id === 399) skyTex = this._skyTexNight;
+            else if (config.id === 666) skyTex = this._skyTexHell;
+            else if (config.id >= 900) skyTex = this._skyTexVoid;
+            if (!skyTex) {
+                if (config.id === 399) this._skyTexNight = skyTex = makeSkyTexture('#0a0c1c', '#121828', '#1c2434');
+                else if (config.id === 666) this._skyTexHell = skyTex = makeSkyTexture('#1c0404', '#380a08', '#541808');
+                else if (config.id >= 900) this._skyTexVoid = skyTex = makeSkyTexture('#0c0a14', '#12101c', '#181424');
+                else this._skyTexDay = skyTex = makeSkyTexture('#4a6a8a', '#8a9ab0', '#d8c8a0');
+            }
+            this.skyDome.material.map = skyTex;
+            this.skyDome.material.needsUpdate = true;
+            this.skyDome.visible = true;
+        } else {
+            this.skyDome.visible = false;
+        }
 
         // 尘埃粒子：室内层级可见
         if (this.dustPoints) this.dustPoints.visible = !this._outdoor && !dark;
@@ -1489,8 +1558,8 @@ export class GameRenderer {
         this.flashlight.target.position.copy(player.position.clone().add(dir));
         this.flashlight.visible = player.flashlightOn;
         this.flashCone.visible = player.flashlightOn;
-        this.viewModelGroup.visible = player.flashlightOn;
-        this.viewModelGroup.quaternion.copy(player.camera.quaternion);
+        // 手臂常显；手电筒模型按 F 显隐
+        this.torchGroup.visible = player.flashlightOn;
 
         if (player.flashlightOn) {
             this.flashCone.position.copy(player.position.clone().addScaledVector(dir, 4.5));
@@ -1672,6 +1741,10 @@ export class GameRenderer {
     }
 
     render() {
+        // 天空穹顶跟随相机
+        if (this.skyDome && this.skyDome.visible) {
+            this.skyDome.position.copy(this.camera.position);
+        }
         // 399 下雨动画
         if (this.rainPoints && this.rainPoints.visible) {
             this._rainT = (this._rainT || 0) + 1;
