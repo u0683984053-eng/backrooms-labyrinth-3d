@@ -323,6 +323,20 @@ export class MazeGenerator {
                     rot: Math.floor(Math.random() * 4) * (Math.PI / 2)
                 });
             }
+            // 街头车辆（废弃的汽车）
+            let cars = 0;
+            for (let t2 = 0; t2 < 60 && cars < 6; t2++) {
+                const ex = 1 + Math.floor(Math.random() * (this.width - 2));
+                const ey = 1 + Math.floor(Math.random() * (this.height - 2));
+                if (this._cellBlocked(ex, ey, 0)) continue;
+                this.decorations.push({
+                    type: 'car',
+                    x: ex * this.cellSize + (Math.random() - 0.5) * 3,
+                    z: ey * this.cellSize + (Math.random() - 0.5) * 3,
+                    rot: Math.floor(Math.random() * 4) * (Math.PI / 2)
+                });
+                cars++;
+            }
         } else if (this.config.id === 4) {
             // Level 4「废弃办公室」：半高隔间
             let placed = 0;

@@ -1293,6 +1293,33 @@ export class GameRenderer {
                     grp.position.set(d.x, 0, d.z);
                     grp.rotation.y = d.rot;
                     single.push(grp);
+                } else if (d.type === 'car') {
+                    // Level 11 城市：废弃汽车
+                    const grp = new THREE.Group();
+                    const colors = [0x5a5a6a, 0x6a4a3a, 0x4a5a4a, 0x7a5a5a];
+                    const carMat = new THREE.MeshStandardMaterial({
+                        color: colors[Math.floor(Math.random() * colors.length)], roughness: 0.6, metalness: 0.3
+                    });
+                    const body = new THREE.Mesh(new THREE.BoxGeometry(4.0, 0.7, 1.9), carMat);
+                    body.position.y = 0.65;
+                    const cabin = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.55, 1.7), carMat);
+                    cabin.position.set(-0.3, 1.25, 0);
+                    const glass = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.4, 1.5), new THREE.MeshStandardMaterial({
+                        color: 0x1a2a3a, roughness: 0.15, metalness: 0.5
+                    }));
+                    glass.position.set(-0.3, 1.25, 0);
+                    for (let i = 0; i < 4; i++) {
+                        const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.2, 10), new THREE.MeshStandardMaterial({
+                            color: 0x1a1a1e, roughness: 0.9
+                        }));
+                        wheel.rotation.z = Math.PI / 2;
+                        wheel.position.set(i < 2 ? 1.25 : -1.25, 0.32, i % 2 === 0 ? 0.95 : -0.95);
+                        grp.add(wheel);
+                    }
+                    grp.add(body, cabin, glass);
+                    grp.position.set(d.x, 0, d.z);
+                    grp.rotation.y = d.rot;
+                    single.push(grp);
                 } else if (d.type === 'blackboard') {
                     // Level 52「学校」：教室黑板
                     const grp = new THREE.Group();
@@ -1568,26 +1595,32 @@ export class GameRenderer {
         }
     }
 
-    // f 版设定：Level 11 城市昼夜切换
+    // f 版设定：Level 11 城市昼夜切换（渐变过渡）
     setDayNight(night) {
         if (!this._outdoor || (this.config && this.config.id !== 11)) {
             this._nightOverride = false;
+            this._nightTarget = undefined;
             return;
         }
         this._nightOverride = night;
-        if (night) {
-            this.ambient.intensity = 0.55;
-            this.hemi.intensity = 0.3;
-            this.renderer.toneMappingExposure = 1.15;
-            this.scene.fog = new THREE.FogExp2(0x0a0e1c, this.scene.fog ? this.scene.fog.density : 0.0006);
-            this.scene.background = new THREE.Color(0x0a0e1c);
-        } else {
-            this.ambient.intensity = 2.0;
-            this.hemi.intensity = 1.0;
-            this.renderer.toneMappingExposure = 1.45;
-            this.scene.fog = new THREE.FogExp2(0x171410, 0.0006);
-            this.scene.background = new THREE.Color(0x171410);
+        this._nightTarget = night ? 1 : 0;
+    }
+
+    // 昼夜渐变（顶级 3D 的晨昏光效）
+    _updateDayNight(dt) {
+        if (this._nightTarget === undefined || !this._nightOverride) return;
+        this._nightBlend = (this._nightBlend === undefined ? (this._nightOverride ? 1 : 0) : this._nightBlend);
+        this._nightBlend += (this._nightTarget - this._nightBlend) * Math.min(1, dt * 0.35);
+        const b = this._nightBlend;
+        this.ambient.intensity = 2.0 - 1.45 * b;
+        this.hemi.intensity = 1.0 - 0.7 * b;
+        this.renderer.toneMappingExposure = 1.45 - 0.3 * b;
+        const fogC = this.scene.fog ? this.scene.fog.color : null;
+        if (fogC) {
+            fogC.lerp(new THREE.Color(0x0a0e1c), b * 0.5);
+            this.scene.background = new THREE.Color(fogC.getHex());
         }
+        if (Math.abs(this._nightBlend - this._nightTarget) < 0.005) this._nightTarget = undefined;
     }
 
     // 荧光灯闪烁（f 版设定：荧光灯嗡嗡作响、偶尔闪烁——闪的是灯，不是手电筒）
@@ -1871,6 +1904,10 @@ export class GameRenderer {
     }
 
     render() {
+        const now = performance.now();
+        const dt = Math.min((now - (this._lastRt || now)) / 1000, 0.1);
+        this._lastRt = now;
+        this._updateDayNight(dt);
         // 天空穹顶跟随相机
         if (this.skyDome && this.skyDome.visible) {
             this.skyDome.position.copy(this.camera.position);
