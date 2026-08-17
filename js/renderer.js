@@ -3,6 +3,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { Reflector } from 'three/addons/objects/Reflector.js';
 import { MazeRenderFlags } from './config.js';
 
 const WALL_H = 3.5;
@@ -293,7 +294,11 @@ export class GameRenderer {
         try {
             this.composer = new EffectComposer(this.renderer);
             this.composer.addPass(new RenderPass(this.scene, this.camera));
-            this.bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.55, 0.5, 0.85);
+            // 半分辨率泛光（性能与画质的平衡，顶级 3D 常用做法）
+            this.bloomPass = new UnrealBloomPass(
+                new THREE.Vector2(window.innerWidth / 2, window.innerHeight / 2),
+                0.55, 0.5, 0.85
+            );
             this.composer.addPass(this.bloomPass);
             this.composer.addPass(new OutputPass());
         } catch (e) {
@@ -1418,19 +1423,22 @@ export class GameRenderer {
         } else if (this.rainPoints) {
             this.rainPoints.visible = false;
         }
-        // Level 37 泳池房：瓷砖水面地板
-        if (this.config && this.config.id === 37) {
-            const waterMat = new THREE.MeshStandardMaterial({
-                color: 0x2a6a8a, roughness: 0.05, metalness: 0.4,
-                transparent: true, opacity: 0.85
-            });
-            const wm = [];
-            for (let x = 0; x < W; x++) {
-                for (let y = 0; y < H; y++) {
-                    wm.push(mat(x * CELL_S, 0.03, y * CELL_S, _qX90, CELL_S, 1, CELL_S));
-                }
+        // Level 37 泳池房 / Level 7 深海：真实水面反射（顶级 3D 的水面）
+        if (this.config && (this.config.id === 37 || this.config.id === 7)) {
+            if (!this.waterReflector) {
+                this.waterReflector = new Reflector(new THREE.PlaneGeometry(150, 150), {
+                    clipBias: 0.003,
+                    textureWidth: 512, textureHeight: 512,
+                    color: this.config.id === 7 ? 0x2a5a7a : 0x3a8a9a
+                });
+                this.waterReflector.position.y = 0.05;
+                this.waterReflector.rotation.x = -Math.PI / 2;
+                this.waterReflector.visible = false;
+                this.scene.add(this.waterReflector);
             }
-            this._instanced(unitPlane, waterMat, wm, this.decoGroup, false, true);
+            this.waterReflector.visible = true;
+        } else if (this.waterReflector) {
+            this.waterReflector.visible = false;
         }
 
         // ---- 补给（f 版核心设定） ----
@@ -1636,21 +1644,29 @@ export class GameRenderer {
                 const snout = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.1, 0.2), mat);
                 snout.position.set(0.78, 0.66, 0);
                 group.add(body, head, snout);
+                const legs = [];
                 for (let i = 0; i < 4; i++) {
                     const leg = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.5, 0.12), mat);
                     leg.position.set((i % 2 === 0 ? -0.38 : 0.38), 0.25, i < 2 ? 0.2 : -0.2);
+                    leg.position.y = 0.5;
+                    leg.geometry.translate(0, -0.25, 0); // 旋转轴在腿根部
                     group.add(leg);
+                    legs.push(leg);
                 }
+                group.userData.legs = legs; // 奔跑摆腿动画
                 break;
             }
             case 'deathmoth': {
                 const wingMat = new THREE.MeshBasicMaterial({ color: 0x9a9aa0, transparent: true, opacity: 0.55, side: THREE.DoubleSide });
                 const w1 = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.5), wingMat);
                 w1.position.set(-0.5, 0.5, 0); w1.rotation.y = 0.6;
+                w1.geometry.translate(0.5, 0, 0); // 旋转轴在翅膀根部
                 const w2 = w1.clone(); w2.position.x = 0.5; w2.rotation.y = -0.6;
+                w2.geometry.translate(0.5, 0, 0);
                 const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.3, 4, 8), mat);
                 body.position.y = 0.5; body.castShadow = true;
                 group.add(w1, w2, body);
+                group.userData.wings = [w1, w2]; // 扑翅动画
                 break;
             }
             case 'burster': {

@@ -141,6 +141,21 @@ export class EntityManager {
             if (e.type === 'deathmoth') continue;
             e.mesh.position.y = e.pos.y + Math.sin(this.timer * 2.2 + e.seed) * 0.05;
         }
+        // 猎犬奔跑摆腿 / 飞蛾扑翅动画
+        for (const e of this.entities) {
+            if (!e.alive) continue;
+            if (e.type === 'hound' && e.mesh.userData && e.mesh.userData.legs) {
+                const running = e.state === 'chase' ? 1 : 0.25;
+                const t = this.timer * 12;
+                e.mesh.userData.legs.forEach((leg, i) => {
+                    leg.rotation.x = Math.sin(t + (i % 2) * Math.PI) * 0.55 * running;
+                });
+            } else if (e.type === 'deathmoth' && e.mesh.userData && e.mesh.userData.wings) {
+                const flap = Math.sin(this.timer * 22 + e.seed) * 0.5;
+                e.mesh.userData.wings[0].rotation.z = flap;
+                e.mesh.userData.wings[1].rotation.z = -flap;
+            }
+        }
     }
 
     _moveTo(e, target, amount) {
