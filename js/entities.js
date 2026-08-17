@@ -155,6 +155,12 @@ export class EntityManager {
                 e.mesh.userData.wings[0].rotation.z = flap;
                 e.mesh.userData.wings[1].rotation.z = -flap;
             }
+            // 发光实体脉动（顶级 3D 的活光源）
+            if (e.type === 'burster' && e.mesh.children[1] && e.mesh.children[1].material) {
+                e.mesh.children[1].material.opacity = 0.2 + Math.sin(this.timer * 6 + e.seed) * 0.12;
+            } else if (e.type === 'smiler' && e.mesh.children[0] && e.mesh.children[0].material) {
+                e.mesh.children[0].material.emissiveIntensity = 0.42 + Math.sin(this.timer * 2.5 + e.seed) * 0.16;
+            }
         }
     }
 

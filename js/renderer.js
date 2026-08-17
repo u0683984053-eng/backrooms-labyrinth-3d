@@ -482,6 +482,26 @@ export class GameRenderer {
             this.scene.add(this.bubblePoints);
         }
         this.bubblePoints.visible = config.id === 7;
+
+        // Level 210 雪境：持续降雪（f 版设定）
+        if (!this.snowPoints) {
+            const N = 420;
+            const pos = new Float32Array(N * 3);
+            for (let i = 0; i < N; i++) {
+                pos[i * 3] = (Math.random() - 0.5) * 150;
+                pos[i * 3 + 1] = Math.random() * 8;
+                pos[i * 3 + 2] = (Math.random() - 0.5) * 150;
+            }
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            this.snowPoints = new THREE.Points(geo, new THREE.PointsMaterial({
+                color: 0xffffff, size: 0.07, transparent: true, opacity: 0.75,
+                depthWrite: false, sizeAttenuation: true
+            }));
+            this.snowPoints.frustumCulled = false;
+            this.scene.add(this.snowPoints);
+        }
+        this.snowPoints.visible = config.id === 210;
         this.floorMat.side = ds ? THREE.DoubleSide : THREE.FrontSide;
         this.floorMat.wireframe = wf;
         this.ceilMat.side = ds ? THREE.DoubleSide : THREE.FrontSide;
@@ -609,6 +629,7 @@ export class GameRenderer {
         this.decoGroup.clear();
         this.entityGroup.clear();
         this.platformGroup.clear();
+        this._exitVeils = [];
 
         const { grid, buildings, trees, decorations, exitPos, platforms } = mazeData;
         if (!grid) return;
@@ -1502,7 +1523,11 @@ export class GameRenderer {
             });
             const veil = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 2.3), glowMat);
             veil.position.y = 1.35;
+            veil.userData.baseOp = veil.material.opacity;
+            veil.userData.phase = Math.random() * Math.PI * 2;
             grp.add(veil);
+            this._exitVeils = this._exitVeils || [];
+            this._exitVeils.push(veil);
             // 光柱（主出口明显）
             if (!ex.hidden) {
                 const beam = new THREE.Mesh(
@@ -1850,6 +1875,13 @@ export class GameRenderer {
         if (this.skyDome && this.skyDome.visible) {
             this.skyDome.position.copy(this.camera.position);
         }
+        // 出口光幕呼吸脉动（指引流浪者的活光源）
+        if (this._exitVeils) {
+            const t = performance.now() / 1000;
+            for (const v of this._exitVeils) {
+                if (v.material) v.material.opacity = (v.userData.baseOp || 0.28) + Math.sin(t * 2 + v.userData.phase) * 0.09;
+            }
+        }
         // 399 下雨动画
         if (this.rainPoints && this.rainPoints.visible) {
             this._rainT = (this._rainT || 0) + 1;
@@ -1869,6 +1901,18 @@ export class GameRenderer {
                 let y = pos.getY(i) + 0.025;
                 if (y > 3.6) y = 0.1;
                 pos.setY(i, y);
+            }
+            pos.needsUpdate = true;
+        }
+        // Level 210 雪花飘落（带横向摇摆）
+        if (this.snowPoints && this.snowPoints.visible) {
+            const pos = this.snowPoints.geometry.attributes.position;
+            const t = performance.now() / 1000;
+            for (let i = 0; i < pos.count; i++) {
+                let y = pos.getY(i) - 0.045;
+                if (y < 0) y = 8 + Math.random() * 0.5;
+                pos.setY(i, y);
+                pos.setX(i, pos.getX(i) + Math.sin(t * 1.2 + i) * 0.004);
             }
             pos.needsUpdate = true;
         }
