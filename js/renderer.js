@@ -1,4 +1,8 @@
 import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { MazeRenderFlags } from './config.js';
 
 const WALL_H = 3.5;
@@ -282,6 +286,20 @@ export class GameRenderer {
 
         this.bobTime = 0;
 
+        // 泛光后处理（顶级 3D 的辉光感：荧光灯/霓虹/光幕）
+        this.useBloom = true;
+        this.composer = null;
+        this.bloomPass = null;
+        try {
+            this.composer = new EffectComposer(this.renderer);
+            this.composer.addPass(new RenderPass(this.scene, this.camera));
+            this.bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.55, 0.5, 0.85);
+            this.composer.addPass(this.bloomPass);
+            this.composer.addPass(new OutputPass());
+        } catch (e) {
+            this.composer = null;
+        }
+
         // 漂浮尘埃粒子（f 版设定：Level 0 潮湿闷热的空气感）
         this.dustPoints = null;
         this._setupDust();
@@ -290,6 +308,7 @@ export class GameRenderer {
             this.camera.aspect = window.innerWidth / window.innerHeight;
             this.camera.updateProjectionMatrix();
             this.renderer.setSize(window.innerWidth, window.innerHeight);
+            if (this.composer) this.composer.setSize(window.innerWidth, window.innerHeight);
         });
     }
 
@@ -383,6 +402,15 @@ export class GameRenderer {
             this.ambient.intensity = 1.85;
             this.hemi.intensity = 0.85;
             this.renderer.toneMappingExposure = 1.65;
+        }
+
+        // 泛光强度按层级氛围（霓虹/室内/黑暗/户外）
+        if (this.bloomPass) {
+            if (config.id === 399) this.bloomPass.strength = 1.25;      // 霓虹辉光
+            else if (config.id === 12) this.bloomPass.strength = 1.0;   // 矩阵白光
+            else if (this._outdoor) this.bloomPass.strength = 0.35;     // 户外自然光
+            else if (dark) this.bloomPass.strength = 0.25;              // 黑暗层级微弱
+            else this.bloomPass.strength = 0.55;                        // 室内荧光灯
         }
 
         const ds = flags.includes(MazeRenderFlags.DOUBLE_SIDED);
@@ -1804,7 +1832,14 @@ export class GameRenderer {
                 this._thunderCb = null;
             }
         }
-        this.renderer.render(this.scene, this.camera);
+        // 泛光后处理（顶级 3D 辉光）或直接渲染
+        if (this.composer && this.useBloom) this.composer.render();
+        else this.renderer.render(this.scene, this.camera);
+    }
+
+    // 泛光开关（低端设备可关闭）
+    setBloomEnabled(on) {
+        this.useBloom = !!on;
     }
 
     // 注册闪电回调（雷声）

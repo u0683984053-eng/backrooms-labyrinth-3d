@@ -106,6 +106,37 @@ class BackroomsGame {
                 try { localStorage.setItem('backrooms3d_vol', String(v)); } catch (e) {}
             });
         }
+
+        // FOV 设置（localStorage 记忆）
+        const fovIn = document.getElementById('fov-input');
+        const fovVal = document.getElementById('fov-value');
+        if (fovIn && fovVal) {
+            try {
+                const saved = parseInt(localStorage.getItem('backrooms3d_fov') || '78', 10);
+                fovIn.value = saved;
+                fovVal.textContent = saved;
+                this.renderer.camera.fov = saved;
+                this.renderer.camera.updateProjectionMatrix();
+            } catch (e) {}
+            fovIn.addEventListener('input', () => {
+                const v = parseInt(fovIn.value, 10);
+                fovVal.textContent = v;
+                this.renderer.camera.fov = v;
+                this.renderer.camera.updateProjectionMatrix();
+                try { localStorage.setItem('backrooms3d_fov', String(v)); } catch (e) {}
+            });
+        }
+
+        // 泛光开关（localStorage 记忆）
+        const bloomIn = document.getElementById('bloom-input');
+        if (bloomIn) {
+            try { bloomIn.checked = localStorage.getItem('backrooms3d_bloom') !== '0'; } catch (e) {}
+            this.renderer.setBloomEnabled(bloomIn.checked);
+            bloomIn.addEventListener('change', () => {
+                this.renderer.setBloomEnabled(bloomIn.checked);
+                try { localStorage.setItem('backrooms3d_bloom', bloomIn.checked ? '1' : '0'); } catch (e) {}
+            });
+        }
     }
 
     _onKeyDown(e) {

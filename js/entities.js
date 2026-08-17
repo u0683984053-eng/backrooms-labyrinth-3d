@@ -175,6 +175,11 @@ export class EntityManager {
         }
         e.mesh.position.copy(e.pos);
         e.mesh.lookAt(e.pos.x + d.x, e.pos.y, e.pos.z + d.z);
+        // 移动姿态：人形/四足实体前倾（奔跑感，顶级 3D 的活物表现）
+        if (e.type === 'hound' || e.type === 'duller' || e.type === 'skin_stealer' || e.type === 'clump' || e.type === 'partygoer') {
+            const tilt = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), 0.14);
+            e.mesh.quaternion.multiply(tilt);
+        }
     }
 
     _patrolTarget(e) {
