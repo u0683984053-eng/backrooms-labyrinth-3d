@@ -284,6 +284,67 @@ export class AudioManager {
             src.start();
             this.levelSounds.push(src);
         }
+
+        // 通用室内通风底噪（后室的标志性环境音）
+        if (this._isIndoor(levelId)) {
+            const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * 2, this.ctx.sampleRate);
+            const d2 = buf.getChannelData(0);
+            for (let i = 0; i < d2.length; i++) d2[i] = (Math.random() * 2 - 1) * 0.4;
+            const s2 = this.ctx.createBufferSource();
+            s2.buffer = buf; s2.loop = true;
+            const g2 = this.ctx.createGain();
+            const f2 = this.ctx.createBiquadFilter();
+            f2.type = 'lowpass'; f2.frequency.value = 320;
+            g2.gain.value = 0.02;
+            s2.connect(f2); f2.connect(g2); g2.connect(this.master);
+            s2.start();
+            this.levelSounds.push(s2);
+        }
+        if (levelId === 9 || levelId === 94) {
+            // 郊区夜：蟋蟀鸣叫
+            const iv = setInterval(() => {
+                if (!this.enabled) return;
+                for (let i = 0; i < 4; i++) {
+                    const s = mk();
+                    s.o.type = 'square';
+                    s.o.frequency.value = 4200 + Math.random() * 400;
+                    s.f.type = 'bandpass'; s.f.frequency.value = 4300; s.f.Q.value = 14;
+                    s.g.gain.setValueAtTime(0.016, t() + i * 0.12);
+                    s.g.gain.exponentialRampToValueAtTime(0.001, t() + i * 0.12 + 0.1);
+                    s.o.stop(t() + i * 0.12 + 0.11);
+                    this.levelSounds.push(s);
+                }
+            }, 1400);
+            this.levelSounds.push({ stop: () => clearInterval(iv), iv });
+        }
+        if (levelId === 28 || levelId === 210) {
+            // 风：持续风噪（雷暴层/雪境）
+            const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * 2, this.ctx.sampleRate);
+            const d3 = buf.getChannelData(0);
+            for (let i = 0; i < d3.length; i++) d3[i] = (Math.random() * 2 - 1) * 0.5;
+            const s3 = this.ctx.createBufferSource();
+            s3.buffer = buf; s3.loop = true;
+            const g3 = this.ctx.createGain();
+            const f3 = this.ctx.createBiquadFilter();
+            f3.type = 'bandpass'; f3.frequency.value = 400; f3.Q.value = 0.6;
+            g3.gain.value = 0.035;
+            s3.connect(f3); f3.connect(g3); g3.connect(this.master);
+            s3.start();
+            this.levelSounds.push(s3);
+            // 风势缓动
+            const iv = setInterval(() => {
+                if (!this.enabled) return;
+                const tt = this.ctx.currentTime;
+                g3.gain.linearRampToValueAtTime(0.02 + Math.random() * 0.04, tt + 3);
+                f3.frequency.linearRampToValueAtTime(280 + Math.random() * 320, tt + 3);
+            }, 3500);
+            this.levelSounds.push({ stop: () => clearInterval(iv), iv });
+        }
+    }
+
+    _isIndoor(levelId) {
+        const indoor = new Set([0, 1, 2, 3, 4, 5, 13, 18, 27, 33, 37, 52, 56, 188, 189, 283, 290, 599]);
+        return indoor.has(levelId);
     }
 
     _modAmbient() {
