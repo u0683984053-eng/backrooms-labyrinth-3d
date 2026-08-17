@@ -1317,6 +1317,14 @@ export class GameRenderer {
                         grp.add(wheel);
                     }
                     grp.add(body, cabin, glass);
+                    // 前灯（夜间发光）
+                    for (const sx of [1.9, 1.9]) {
+                        const head = new THREE.Mesh(new THREE.SphereGeometry(0.09, 6, 5), new THREE.MeshBasicMaterial({
+                            color: 0xfff2a0, transparent: true, opacity: 0.95
+                        }));
+                        head.position.set(sx, 0.7, 0.78);
+                        grp.add(head);
+                    }
                     grp.position.set(d.x, 0, d.z);
                     grp.rotation.y = d.rot;
                     single.push(grp);
@@ -1427,7 +1435,7 @@ export class GameRenderer {
         }
 
         // ---- 层级特色装饰（f 版设定） ----
-        // Level 399 霓虹深渊：街道上方霓虹灯条
+        // Level 399 霓虹深渊：霓虹灯条
         if (this.config && this.config.id === 399) {
             const neonColors = [0xff2d78, 0x00e5ff, 0xaa66ff, 0xffaa00];
             const neonMat = [];
@@ -1448,7 +1456,10 @@ export class GameRenderer {
                 const ms = neonMs.filter((_, i) => i % neonColors.length === c);
                 this._instanced(unitBox, neonMat[c], ms, this.decoGroup, false, false);
             }
-            // 下雨：斜落雨线粒子（399 设定：无尽湿漉街道）
+        }
+        // 雨：Level 399 霓虹 / Level 28 雷暴（f 版设定：永恒雷雨）
+        const rainy = this.config && (this.config.id === 399 || this.config.id === 28);
+        if (rainy) {
             if (!this.rainPoints) {
                 const N = 500;
                 const pos = new Float32Array(N * 3);
@@ -1821,6 +1832,31 @@ export class GameRenderer {
 
     addEntityMesh(m) { this.entityGroup.add(m); }
     removeEntityMesh(m) { this.entityGroup.remove(m); }
+
+    // 投掷物（火盐抛物线弹道，顶级 FPS 的投掷手感）
+    throwProjectile(from, dir, speed, onHit) {
+        const ball = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), new THREE.MeshBasicMaterial({
+            color: 0xff8833, transparent: true, opacity: 1,
+            blending: THREE.AdditiveBlending, depthWrite: false
+        }));
+        ball.position.copy(from);
+        this.scene.add(ball);
+        const vel = dir.clone().multiplyScalar(speed);
+        const t0 = performance.now();
+        const tick = () => {
+            const dt = 1 / 60;
+            vel.y -= 14 * dt;
+            ball.position.addScaledVector(vel, dt);
+            const t = (performance.now() - t0) / 1000;
+            // 命中检测（实体或地面）
+            if (onHit(ball.position.clone()) || ball.position.y < 0.15 || t > 1.6) {
+                this.scene.remove(ball);
+                return;
+            }
+            requestAnimationFrame(tick);
+        };
+        tick();
+    }
 
     // 爆炸/灼烧特效（火盐命中实体）
     createExplosion(pos) {

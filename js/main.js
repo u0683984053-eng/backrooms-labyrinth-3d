@@ -478,7 +478,7 @@ class BackroomsGame {
         el.style.opacity = Math.min(1, (bd - 8) / 40).toFixed(2);
     }
 
-    // 火盐投掷（f 版设定：少数能对抗实体的手段）
+    // 火盐投掷（f 版设定：少数能对抗实体的手段；真实抛物线弹道）
     _throwFireSalt() {
         // 投掷动作：手臂前伸回弹（顶级 FPS 的反馈）
         const vm = this.renderer.viewModelGroup;
@@ -487,27 +487,29 @@ class BackroomsGame {
             setTimeout(() => { vm.position.z = -0.55; }, 130);
         }
         const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(this.renderer.camera.quaternion);
-        let best = null, bd = 24;
-        for (const e of this.entityManager.entities) {
-            if (!e.alive) continue;
-            const d = e.pos.distanceTo(this.player.position);
-            if (d > bd) continue;
-            const dirTo = e.pos.clone().sub(this.player.position);
-            dirTo.y = 0; dirTo.normalize();
-            if (fwd.dot(dirTo) < 0.4) continue; // 视线 60° 内
-            best = e; bd = d;
-        }
-        if (best) {
-            this.entityManager.damageEntity(best, 60);
-            this.audio.playFireSalt();
-            this.renderer.createExplosion(best.pos);
-        } else {
-            this.audio.playStep();
-            const hintEl = document.getElementById('interaction-hint');
-            hintEl.classList.remove('hidden');
-            hintEl.textContent = '火盐掷向虚空...';
-            setTimeout(() => { if (!this._nearestPickup(2.2)) hintEl.classList.add('hidden'); }, 1200);
-        }
+        fwd.y = Math.max(0, fwd.y) + 0.12; // 略微上抛
+        const from = this.renderer.camera.position.clone();
+        this.renderer.throwProjectile(from, fwd, 17, (pos) => {
+            // 实体命中检测
+            let best = null, bd = 1.7;
+            for (const e of this.entityManager.entities) {
+                if (!e.alive) continue;
+                const d = e.pos.distanceTo(pos);
+                if (d < bd) { bd = d; best = e; }
+            }
+            if (best) {
+                this.entityManager.damageEntity(best, 60);
+                this.audio.playFireSalt();
+                this.renderer.createExplosion(best.pos);
+                return true;
+            }
+            if (pos.y <= 0.15) {
+                this.audio.playFireSalt();
+                this.renderer.createExplosion(pos);
+                return true;
+            }
+            return false;
+        });
     }
 
     // Level 404 故障传送：随机移动到本层开放位置
