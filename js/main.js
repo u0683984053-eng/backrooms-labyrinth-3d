@@ -480,6 +480,12 @@ class BackroomsGame {
 
     // 火盐投掷（f 版设定：少数能对抗实体的手段）
     _throwFireSalt() {
+        // 投掷动作：手臂前伸回弹（顶级 FPS 的反馈）
+        const vm = this.renderer.viewModelGroup;
+        if (vm) {
+            vm.position.z = -0.85;
+            setTimeout(() => { vm.position.z = -0.55; }, 130);
+        }
         const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(this.renderer.camera.quaternion);
         let best = null, bd = 24;
         for (const e of this.entityManager.entities) {
@@ -587,6 +593,8 @@ class BackroomsGame {
         if (!added) return;
         this.mazeData.pickups = this.mazeData.pickups.filter(p => p !== pk);
         this._removePickupMesh(pk);
+        // 拾取光效
+        this.renderer.sparkle(new THREE.Vector3(pk.x, 0.5, pk.z), pk.type === 'cashew_water' ? 0x66ffcc : 0x66ccff);
         this.audio.playCollect();
         this._refreshInventory();
     }
@@ -632,6 +640,8 @@ class BackroomsGame {
         this.input.releaseLock();
         this.audio.stopAmbient();
         this.audio.playTransition();
+        // 通关光效：金色光点升腾
+        this.renderer.celebrate(this.player.position);
         document.getElementById('hud').classList.add('hidden');
         document.getElementById('ending-screen').classList.remove('hidden');
         // 显示通关用时

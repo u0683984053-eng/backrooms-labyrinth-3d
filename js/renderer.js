@@ -1784,6 +1784,67 @@ export class GameRenderer {
         tick();
     }
 
+    // 拾取光效：八颗光点飞散（顶级 3D 的反馈质感）
+    sparkle(pos, color) {
+        const g = new THREE.Group();
+        for (let i = 0; i < 8; i++) {
+            const p = new THREE.Mesh(new THREE.SphereGeometry(0.045, 4, 3), new THREE.MeshBasicMaterial({
+                color: color || 0x66ccff, transparent: true, opacity: 0.9, depthWrite: false
+            }));
+            p.userData.dir = new THREE.Vector3(Math.random() - 0.5, 0.3 + Math.random() * 0.7, Math.random() - 0.5).normalize();
+            g.add(p);
+        }
+        g.position.copy(pos);
+        g.position.y += 0.5;
+        this.scene.add(g);
+        const t0 = performance.now();
+        const tick = () => {
+            const t = (performance.now() - t0) / 420;
+            if (t >= 1) { this.scene.remove(g); return; }
+            g.children.forEach(p => {
+                p.position.copy(p.userData.dir).multiplyScalar(t * 1.3);
+                p.material.opacity = 0.9 * (1 - t);
+            });
+            requestAnimationFrame(tick);
+        };
+        tick();
+    }
+
+    // 通关庆祝：金色光点升腾
+    celebrate(pos) {
+        const N = 90;
+        const geo = new THREE.BufferGeometry();
+        const posArr = new Float32Array(N * 3);
+        const vel = [];
+        for (let i = 0; i < N; i++) {
+            posArr[i * 3] = pos.x + (Math.random() - 0.5) * 8;
+            posArr[i * 3 + 1] = pos.y + (Math.random() - 0.5) * 3;
+            posArr[i * 3 + 2] = pos.z + (Math.random() - 0.5) * 8;
+            vel.push(new THREE.Vector3((Math.random() - 0.5) * 0.25, 0.7 + Math.random() * 1.2, (Math.random() - 0.5) * 0.25));
+        }
+        geo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
+        const pts = new THREE.Points(geo, new THREE.PointsMaterial({
+            color: 0xffd870, size: 0.14, transparent: true, opacity: 0.9, depthWrite: false, sizeAttenuation: true
+        }));
+        pts.frustumCulled = false;
+        this.scene.add(pts);
+        const t0 = performance.now();
+        const tick = () => {
+            const t = (performance.now() - t0) / 2400;
+            if (t >= 1) { this.scene.remove(pts); return; }
+            const p = pts.geometry.attributes.position;
+            for (let i = 0; i < N; i++) {
+                p.array[i * 3] += vel[i].x;
+                p.array[i * 3 + 1] += vel[i].y;
+                p.array[i * 3 + 2] += vel[i].z;
+            }
+            p.needsUpdate = true;
+            pts.material.opacity = 0.9 * (1 - t);
+            requestAnimationFrame(tick);
+        };
+        tick();
+    }
+
     render() {
         // 天空穹顶跟随相机
         if (this.skyDome && this.skyDome.visible) {
