@@ -28,7 +28,7 @@ export class EntityManager {
             mesh.position.set(sd.x, 1, sd.z);
             mesh.castShadow = true;
             this.renderer.addEntityMesh(mesh);
-            this.entities.push({
+            const ent = {
                 type: sd.type, def, mesh,
                 pos: new THREE.Vector3(sd.x, 1, sd.z),
                 spawn: new THREE.Vector3(sd.x, 1, sd.z),
@@ -43,6 +43,20 @@ export class EntityManager {
                 attackCd: 0, attackInterval: 1.5,
                 patrolTimer: 0, patrolDest: new THREE.Vector3(),
                 alive: true,
+            };
+            this.entities.push(ent);
+            // 外部 AI 模型异步替换（无文件时自动回退程序化模型）
+            this.renderer.loadEntityModel(sd.type, (external) => {
+                if (!external) return;
+                const idx = this.entities.indexOf(ent);
+                if (idx < 0 || !ent.alive) return;
+                const clone = external.clone();
+                clone.position.copy(ent.pos);
+                clone.quaternion.copy(ent.mesh.quaternion);
+                clone.userData = ent.mesh.userData;
+                this.renderer.removeEntityMesh(ent.mesh);
+                this.renderer.addEntityMesh(clone);
+                ent.mesh = clone;
             });
         }
     }

@@ -4,6 +4,14 @@
 
 > 原版虽然使用 Three.js 渲染，但视觉上呈现"2.5D"效果：无纹理纯色材质、浓雾压低视野、无垂直维度（玩家 Y 轴固定）、装饰数据生成了却从未渲染。本 3D 版针对这些问题做了系统性升级，画面与玩法全面对齐 **Fandom（f 版）后室设定**：37 个具名层级、M.E.G. 档案体系、实体生态、补给物品与生存机制。
 
+## 外部资产导入（腾讯混元 3D 等）
+
+游戏支持**外部 AI 生成模型与真实纹理**替换程序化资产，放入文件即生效、缺失自动回退：
+
+- **实体模型**：混元 3D / Tripo / Meshy 生成 GLB → 放入 `assets/models/{实体ID}.glb`（如 `smiler.glb`、`hound.glb`），自动缩放对齐（提示词与文件名对照见 `assets/ASSETS.md`）
+- **真实纹理**：ambientCG / Poly Haven 下载 CC0 贴图 → 放入 `assets/textures/wallpaper.jpg`（carpet.jpg / ceiling.jpg / crate.jpg），自动平铺替换手绘纹理
+- 服务器已支持 .glb/.webp MIME
+
 ## 最终验证（自动化 QA，无头 Edge + 帧缓冲）
 
 - **37 个层级全量冒烟**：全部正常渲染，无 JS 错误（composer 后处理管线）

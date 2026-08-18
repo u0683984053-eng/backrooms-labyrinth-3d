@@ -4,6 +4,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { Reflector } from 'three/addons/objects/Reflector.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MazeRenderFlags } from './config.js';
 
 const WALL_H = 3.5;
@@ -305,6 +306,11 @@ export class GameRenderer {
             this.composer = null;
         }
 
+        // 外部资产：真实纹理 + AI 生成实体模型（assets/，缺失自动回退）
+        this.modelCache = {};
+        this.modelLoader = new GLTFLoader();
+        this._loadExternalTextures();
+
         // 漂浮尘埃粒子（f 版设定：Level 0 潮湿闷热的空气感）
         this.dustPoints = null;
         this._setupDust();
@@ -314,6 +320,52 @@ export class GameRenderer {
             this.camera.updateProjectionMatrix();
             this.renderer.setSize(window.innerWidth, window.innerHeight);
             if (this.composer) this.composer.setSize(window.innerWidth, window.innerHeight);
+        });
+    }
+
+    // 外部真实纹理（assets/textures/，缺失自动回退程序化纹理）
+    _loadExternalTextures() {
+        const tl = new THREE.TextureLoader();
+        const plans = {
+            texWall: ['wallpaper.jpg', (tex) => { this.wallMat.map = tex; this.wallMat.bumpMap = tex; this.wallMat.needsUpdate = true; }],
+            texFloor: ['carpet.jpg', (tex) => { this.floorMat.map = tex; this.floorMat.bumpMap = tex; this.floorMat.needsUpdate = true; }],
+            texCeil: ['ceiling.jpg', (tex) => { this.ceilMat.map = tex; this.ceilMat.needsUpdate = true; }],
+            texCrate: ['crate.jpg', (tex) => { this.crateMat.map = tex; this.crateMat.needsUpdate = true; }],
+        };
+        for (const [key, [file, apply]] of Object.entries(plans)) {
+            tl.load('assets/textures/' + file, (tex) => {
+                tex.colorSpace = THREE.SRGBColorSpace;
+                tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+                tex.anisotropy = 4;
+                this[key] = tex;
+                apply(tex);
+            }, undefined, () => { /* 文件缺失：保持程序化纹理 */ });
+        }
+    }
+
+    // 外部实体模型（assets/models/{type}.glb，缺失回退程序化；带缓存）
+    loadEntityModel(type, cb) {
+        if (this.modelCache[type] !== undefined) { cb(this.modelCache[type]); return; }
+        this.modelLoader.load('assets/models/' + type + '.glb', (gltf) => {
+            const group = gltf.scene;
+            // 统一缩放：按实体类型目标高度
+            const target = {
+                smiler: 0.9, hound: 1.2, duller: 1.9, clump: 1.6, deathmoth: 1.0,
+                skin_stealer: 1.9, scratcher: 1.7, burster: 1.0, partygoer: 1.8
+            }[type] || 1.6;
+            const box = new THREE.Box3().setFromObject(group);
+            const size = box.getSize(new THREE.Vector3());
+            const maxDim = Math.max(size.x, size.y, size.z) || 1;
+            group.scale.setScalar(target / maxDim);
+            // 底部对齐
+            const b2 = new THREE.Box3().setFromObject(group);
+            group.position.y -= b2.min.y;
+            group.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
+            this.modelCache[type] = group;
+            cb(group);
+        }, undefined, () => {
+            this.modelCache[type] = null;
+            cb(null);
         });
     }
 
